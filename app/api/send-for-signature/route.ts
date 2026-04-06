@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Lead has no email address. Please add an email before sending.' }, { status: 400 })
     }
 
-    // ─── Fetch sections, items ─────────────────────────────────────────────
+    // ─── Fetch sections, items, rows ───────────────────────────────────────
     const { data: sections } = await supabase
       .from('proposal_sections')
       .select('*')
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       .select('*')
       .eq('proposal_id', proposalId)
 
-    // ─── Build structured data ─────────────────────────────────────────────
+    // ─── Structure data ────────────────────────────────────────────────────
     const structured = (sections || []).map((section: any) => ({
       ...section,
       items: (items || [])
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     const printDate = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
 
-    // ─── Build HTML document for Dropbox Sign ─────────────────────────────
+    // ─── Build sections HTML ───────────────────────────────────────────────
     const sectionsHtml = structured.map((section: any) => {
       const sectionTotal = section.items.reduce((sum: number, item: any) => sum + item.itemTotal, 0)
 
@@ -107,11 +107,22 @@ export async function POST(req: NextRequest) {
         </table>`
     }).join('')
 
-    const htmlContent = `
-<!DOCTYPE html>
+    // ─── Terms and conditions HTML ─────────────────────────────────────────
+    const tcText = proposal.terms_and_conditions || ''
+    const tcHtml = tcText
+      ? tcText
+          .split('\n')
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0)
+          .map((line: string) => `<p style="margin:4px 0;">${line}</p>`)
+          .join('')
+      : '<p style="color:#999;">No terms and conditions provided.</p>'
+
+    // ─── Build full HTML document ──────────────────────────────────────────
+    const htmlContent = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>${proposal.title || 'Proposal'}</title></head>
-<body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#333;">
+<body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#333;font-size:12px;">
 
   <div style="text-align:center;margin-bottom:16px;">
     <p style="font-size:20px;font-weight:700;color:#1a3a5c;margin:0;">K&amp;D Contracting LLC</p>
@@ -121,13 +132,13 @@ export async function POST(req: NextRequest) {
   <hr style="border-color:#1a3a5c;border-width:2px;margin:12px 0;" />
 
   <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
-    <div style="font-size:12px;">
+    <div>
       <p style="margin:2px 0;font-weight:600;">${lead.name}</p>
       <p style="margin:2px 0;color:#555;">Cell: ${lead.phone || ''}</p>
       <p style="margin:8px 0 2px;font-weight:600;">Job Address:</p>
       <p style="margin:2px 0;color:#555;">${lead.address || ''}</p>
     </div>
-    <div style="font-size:12px;text-align:right;">
+    <div style="text-align:right;">
       <p style="margin:2px 0;"><strong>Print Date:</strong> ${printDate}</p>
     </div>
   </div>
@@ -135,12 +146,9 @@ export async function POST(req: NextRequest) {
   <h1 style="font-size:22px;color:#1a3a5c;margin:0 0 12px;">${proposal.title || 'Proposal'}</h1>
 
   <div style="margin-bottom:16px;">
-    <p style="font-weight:700;font-size:12px;margin:0 0 4px;">CONTRACT SERVICES</p>
-    <p style="font-weight:600;font-size:12px;margin:0 0 6px;">Description of the Services:</p>
-    <p style="font-size:12px;color:#555;line-height:1.5;">
-      The Contractor agrees to provide the following goods and services (collectively "Services") to the Customer
-      described in detail below or more specifically outlined in the proposal section of this Agreement.
-    </p>
+    <p style="font-weight:700;margin:0 0 4px;">CONTRACT SERVICES</p>
+    <p style="font-weight:600;margin:0 0 6px;">Description of the Services:</p>
+    <p style="color:#555;line-height:1.5;">The Contractor agrees to provide the following goods and services (collectively "Services") to the Customer described in detail below or more specifically outlined in the proposal section of this Agreement.</p>
   </div>
 
   <hr style="border-color:#ddd;margin:12px 0;" />
@@ -154,19 +162,9 @@ export async function POST(req: NextRequest) {
 
   <hr style="border-color:#ddd;margin:16px 0;" />
 
-  <div style="font-size:10px;color:#555;line-height:1.6;">
-    <p style="font-weight:700;font-size:12px;color:#1a3a5c;">Terms and Conditions</p>
-    <p><strong>1. Scope of Work:</strong> The contractor agrees to design, supply materials, and install a fiberglass pool according to the specifications detailed in the agreed plans.</p>
-    <p><strong>1.2 Changes in Scope:</strong> Any modifications must be agreed upon in writing through a Change Order or Addendum signed by both parties.</p>
-    <p><strong>2. Timelines:</strong> Administrative management begins immediately after the initial payment (approx. 6 weeks). Construction is estimated at approximately 60 calendar days once permits are approved.</p>
-    <p><strong>3. Payment Schedule:</strong> 10% upon signing &bull; 30% after permits approved &bull; 30% pool installation &bull; 20% equipment set and start-up &bull; 10% upon completion.</p>
-    <p><strong>3.3 Payment Methods:</strong> Check, Credit Card (3% fee), ACH (1% fee), or Direct Deposit for financed projects.</p>
-    <p><strong>4. Site Conditions:</strong> Client must provide property access, water, electricity, and clear the work area. Contractor is not responsible for unforeseen underground obstacles.</p>
-    <p><strong>5. Warranty:</strong> One year on labor and materials. Fiberglass shell — Lifetime (non-transferable). Pool Finish — Lifetime. Equipment warranted per manufacturer terms.</p>
-    <p><strong>6. Termination:</strong> Planning, design, engineering, permitting, and administrative costs are non-refundable once services have begun.</p>
-    <p><strong>7. Dispute Resolution:</strong> Disputes will first be addressed through mediation before legal action.</p>
-    <p><strong>8. Governing Law:</strong> State of Virginia.</p>
-    <p><strong>Exclusions:</strong> Disposal of excavated dirt beyond 50ft, irrigation damage, painting/staining, sod/turf replacement, relocating existing utilities, site unknowns, and window/door alarms unless specified in writing.</p>
+  <div style="font-size:10px;color:#444;line-height:1.7;">
+    <p style="font-weight:700;font-size:12px;color:#1a3a5c;margin-bottom:8px;">Terms and Conditions</p>
+    ${tcHtml}
   </div>
 
   <div style="margin-top:30px;padding-top:16px;border-top:1px solid #ddd;">

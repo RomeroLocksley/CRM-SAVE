@@ -4,33 +4,31 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export default function TemplatesPage() {
-  // ─── Top level: templates list ────────────────────────────────────────────
   const [templates, setTemplates] = useState<any[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [newTemplateName, setNewTemplateName] = useState('')
   const [newTemplateDescription, setNewTemplateDescription] = useState('')
 
-  // ─── Template sections ────────────────────────────────────────────────────
   const [templateSections, setTemplateSections] = useState<any[]>([])
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null)
 
-  // ─── Adding a section: pick from catalog sections ─────────────────────────
   const [catalogSections, setCatalogSections] = useState<any[]>([])
   const [selectedCatalogSectionId, setSelectedCatalogSectionId] = useState('')
   const [showAddSection, setShowAddSection] = useState(false)
 
-  // ─── Adding items to a section ────────────────────────────────────────────
   const [catalogItemsForSection, setCatalogItemsForSection] = useState<any[]>([])
   const [addingItemsToSectionId, setAddingItemsToSectionId] = useState<string | null>(null)
   const [addingItemsCatalogSectionId, setAddingItemsCatalogSectionId] = useState<string | null>(null)
 
-  // ─── Template items per section ───────────────────────────────────────────
   const [templateItems, setTemplateItems] = useState<Record<string, any[]>>({})
-
-  // ─── Expanded item: cost rows ─────────────────────────────────────────────
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
   const [itemCostRows, setItemCostRows] = useState<Record<string, any[]>>({})
   const [templateItemRows, setTemplateItemRows] = useState<Record<string, any[]>>({})
+
+  // T&C editing
+  const [tcText, setTcText] = useState('')
+  const [tcSaving, setTcSaving] = useState(false)
+  const [tcSaved, setTcSaved] = useState(false)
 
   // ─── Templates ────────────────────────────────────────────────────────────
 
@@ -55,6 +53,7 @@ export default function TemplatesPage() {
     setNewTemplateDescription('')
     getTemplates()
     setSelectedTemplateId(data.id)
+    setTcText('')
     getTemplateSections(data.id)
   }
 
@@ -91,9 +90,22 @@ export default function TemplatesPage() {
       setSelectedTemplateId(null)
       setTemplateSections([])
       setTemplateItems({})
+      setTcText('')
     }
 
     getTemplates()
+  }
+
+  async function saveTc() {
+    if (!selectedTemplateId) return
+    setTcSaving(true)
+    await supabase
+      .from('templates')
+      .update({ terms_and_conditions: tcText })
+      .eq('id', selectedTemplateId)
+    setTcSaving(false)
+    setTcSaved(true)
+    setTimeout(() => setTcSaved(false), 2000)
   }
 
   // ─── Template sections ────────────────────────────────────────────────────
@@ -157,8 +169,6 @@ export default function TemplatesPage() {
     if (selectedTemplateId) getTemplateSections(selectedTemplateId)
   }
 
-  // ─── Catalog sections (for picker) ────────────────────────────────────────
-
   async function getCatalogSections() {
     const { data, error } = await supabase
       .from('catalog_sections')
@@ -221,7 +231,7 @@ export default function TemplatesPage() {
     getTemplateItems(sectionId)
   }
 
-  // ─── Template item rows (quantities) ─────────────────────────────────────
+  // ─── Template item rows ───────────────────────────────────────────────────
 
   async function getTemplateItemRows(templateItemId: string, catalogItemId: string) {
     const { data: catalogRows, error: crErr } = await supabase
@@ -242,29 +252,20 @@ export default function TemplatesPage() {
     setTemplateItemRows((prev) => ({ ...prev, [templateItemId]: tirData || [] }))
   }
 
-  async function upsertTemplateItemRow(
-    templateItemId: string,
-    catalogCostRowId: string,
-    quantity: number
-  ) {
+  async function upsertTemplateItemRow(templateItemId: string, catalogCostRowId: string, quantity: number) {
     const existing = (templateItemRows[templateItemId] || []).find(
       (r: any) => r.catalog_cost_row_id === catalogCostRowId
     )
 
     if (existing) {
-      await supabase
-        .from('template_item_rows')
-        .update({ quantity })
-        .eq('id', existing.id)
+      await supabase.from('template_item_rows').update({ quantity }).eq('id', existing.id)
     } else {
-      await supabase
-        .from('template_item_rows')
-        .insert([{
-          item_id: templateItemId,
-          catalog_cost_row_id: catalogCostRowId,
-          quantity,
-          sort_order: 0,
-        }])
+      await supabase.from('template_item_rows').insert([{
+        item_id: templateItemId,
+        catalog_cost_row_id: catalogCostRowId,
+        quantity,
+        sort_order: 0,
+      }])
     }
 
     const firstRow = itemCostRows[templateItemId]?.[0]
@@ -286,8 +287,6 @@ export default function TemplatesPage() {
       .eq('id', templateItemId)
     getTemplateItems(sectionId)
   }
-
-  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   useEffect(() => {
     getTemplates()
@@ -338,6 +337,7 @@ export default function TemplatesPage() {
                 setSelectedTemplateId(t.id)
                 setExpandedSectionId(null)
                 setExpandedItemId(null)
+                setTcText(t.terms_and_conditions || '')
                 getTemplateSections(t.id)
               }}
             >
@@ -353,7 +353,6 @@ export default function TemplatesPage() {
                   deleteTemplate(t.id)
                 }}
                 className="ml-2 opacity-0 group-hover:opacity-100 text-xs text-gray-400 hover:text-red-500 transition-opacity"
-                title="Delete template"
               >
                 ✕
               </button>
@@ -419,10 +418,10 @@ export default function TemplatesPage() {
             )}
 
             {templateSections.length === 0 && (
-              <p className="text-gray-400 text-sm">No sections yet. Add one above.</p>
+              <p className="text-gray-400 text-sm mb-6">No sections yet. Add one above.</p>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-4 mb-8">
               {templateSections.map((section) => {
                 const isExpanded = expandedSectionId === section.id
                 const items = templateItems[section.id] || []
@@ -430,7 +429,6 @@ export default function TemplatesPage() {
                 return (
                   <div key={section.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
 
-                    {/* Section header */}
                     <div className="flex items-center justify-between px-5 py-4">
                       <div
                         className="flex-1 cursor-pointer"
@@ -469,11 +467,9 @@ export default function TemplatesPage() {
                       </div>
                     </div>
 
-                    {/* Expanded section */}
                     {isExpanded && (
                       <div className="border-t border-gray-100 px-5 py-4">
 
-                        {/* Add item picker */}
                         {addingItemsToSectionId === section.id ? (
                           <div className="mb-4">
                             <div className="flex items-center gap-3 mb-3">
@@ -543,7 +539,6 @@ export default function TemplatesPage() {
                           </button>
                         )}
 
-                        {/* Items list */}
                         {items.length === 0 ? (
                           <p className="text-xs text-gray-400">No items yet.</p>
                         ) : (
@@ -557,7 +552,6 @@ export default function TemplatesPage() {
                               return (
                                 <div key={item.id} className="border border-gray-100 rounded-xl overflow-hidden">
 
-                                  {/* Item header */}
                                   <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
                                     <div
                                       className="flex-1 cursor-pointer"
@@ -596,7 +590,6 @@ export default function TemplatesPage() {
                                     </div>
                                   </div>
 
-                                  {/* Item expanded: quantities */}
                                   {isItemExpanded && (
                                     <div className="px-4 py-3 border-t border-gray-100">
 
@@ -665,6 +658,34 @@ export default function TemplatesPage() {
                 )
               })}
             </div>
+
+            {/* Terms and Conditions */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-gray-700">Terms and Conditions</p>
+                <div className="flex items-center gap-3">
+                  {tcSaved && <span className="text-xs text-green-600">✓ Saved</span>}
+                  <button
+                    onClick={saveTc}
+                    disabled={tcSaving}
+                    className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
+                  >
+                    {tcSaving ? 'Saving…' : 'Save T&C'}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mb-2">
+                This text will be included in the proposal preview and sent to the client for signature.
+              </p>
+              <textarea
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none font-mono"
+                rows={20}
+                placeholder="Paste your terms and conditions here..."
+                value={tcText}
+                onChange={(e) => setTcText(e.target.value)}
+              />
+            </div>
+
           </>
         )}
       </div>

@@ -5,8 +5,6 @@ import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type CostRow = {
   id: string
   item_id: string
@@ -47,8 +45,6 @@ type LeadInfo = {
   address: string
 }
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
-
 function toNumericOrNull(value: any): number | null {
   if (value === '' || value === null || value === undefined) return null
   const n = Number(value)
@@ -63,11 +59,12 @@ function formatQtyUnit(qty: any, unit: string): string {
   return unit ? `${qtyStr} ${unit}` : qtyStr
 }
 
-// ─── Preview component ────────────────────────────────────────────────────────
+// ─── Preview ──────────────────────────────────────────────────────────────────
 
 function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, proposalTitle: string }) {
   const [sections, setSections] = useState<ProposalSection[]>([])
   const [lead, setLead] = useState<LeadInfo | null>(null)
+  const [tc, setTc] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -76,7 +73,7 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
       const { data: proposal } = await supabase
         .from('proposals')
-        .select('title, leads(name, phone, address)')
+        .select('title, terms_and_conditions, leads(name, phone, address)')
         .eq('id', proposalId)
         .single()
 
@@ -84,22 +81,14 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
         const l = proposal.leads as any
         setLead({ name: l.name || '', phone: l.phone || '', address: l.address || '' })
       }
+      setTc(proposal?.terms_and_conditions || '')
 
       const { data: sectionsData } = await supabase
-        .from('proposal_sections')
-        .select('*')
-        .eq('proposal_id', proposalId)
-        .order('created_at', { ascending: true })
-
+        .from('proposal_sections').select('*').eq('proposal_id', proposalId).order('created_at', { ascending: true })
       const { data: itemsData } = await supabase
-        .from('proposal_items')
-        .select('*')
-        .eq('proposal_id', proposalId)
-
+        .from('proposal_items').select('*').eq('proposal_id', proposalId)
       const { data: rowsData } = await supabase
-        .from('proposal_item_rows')
-        .select('*')
-        .eq('proposal_id', proposalId)
+        .from('proposal_item_rows').select('*').eq('proposal_id', proposalId)
 
       const structured: ProposalSection[] = (sectionsData || []).map((section) => ({
         ...section,
@@ -226,43 +215,14 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
         <hr className="border-gray-200 mb-6" />
 
-        <div className="text-xs text-gray-700 leading-relaxed space-y-3">
-          <p className="font-bold text-sm text-[#1a3a5c]">Terms and Conditions</p>
-          <p className="font-semibold">1. Terms and Conditions</p>
-          <p>The contractor agrees to design, supply materials, and install a fiberglass pool according to the specifications detailed in the agreed plans and the scope of work outlined below:</p>
-          <p><span className="font-semibold">b) Planning and Permits:</span> This includes the review and approval of plans by a certified engineer, as well as the comprehensive management and acquisition of all required permits. The contractor will coordinate all required inspections to ensure regulatory compliance throughout the construction process.</p>
-          <p><span className="font-semibold">c) Excavation and Site Preparation:</span> This phase includes mobilization of specialized equipment for excavation of the pool to the agreed dimensions. Clean #68 gravel will be provided and used for proper base preparation. Excavation is based on normal soil conditions. If unforeseen conditions are encountered, additional costs may apply and will be discussed with the homeowner prior to proceeding.</p>
-          <p><span className="font-semibold">d) Fiberglass Shell Installation and Backfill:</span> The fiberglass pool shell will be delivered, set, and leveled in accordance with manufacturer specifications. Backfilling will be completed using clean #68 gravel only. The pool shell will be filled with water simultaneously with backfilling to maintain equalized pressure.</p>
-          <p><span className="font-semibold">e) Plumbing and Electrical Installation:</span> Excavation and trenching for plumbing and electrical lines will be performed. All plumbing lines will be pressure tested prior to backfilling.</p>
-          <p><span className="font-semibold">f) Equipment Installation:</span> Provision and installation of essential pool equipment including pumps, filters, and lighting systems.</p>
-          <p><span className="font-semibold">g) Drainage and Groundwater Management:</span> A gravel drainage layer will be installed around the pool shell using #68 gravel.</p>
-          <p><span className="font-semibold">h) Backfill for Grading:</span> Excavated soil will be reused for general site grading only and will not be used for backfilling against the pool shell.</p>
-          <p><span className="font-semibold">i) Completion:</span> Final connections and comprehensive testing of all plumbing and electrical systems will be performed.</p>
-          <p><span className="font-semibold">j) Groundwater Disclaimer:</span> The contractor is not responsible for damage caused by homeowner lowering or draining the pool without proper precautions.</p>
-          <p className="font-semibold">1.2 Changes in Scope of Work:</p>
-          <p>Any modifications must be agreed upon in writing through a Change Order or Addendum signed by both parties. Verbal agreements will not be valid.</p>
-          <p className="font-semibold">2. Timelines</p>
-          <p><span className="font-semibold">2.1</span> Administrative management begins immediately after the initial payment (approx. 6 weeks). <span className="font-semibold">2.2</span> Construction is estimated at approximately 60 calendar days once permits are approved.</p>
-          <p className="font-semibold">3. Payments</p>
-          <ul className="list-disc ml-5 space-y-0.5">
-            <li>10% Upon signing the contract.</li>
-            <li>30% After permits are approved.</li>
-            <li>30% Pool installation.</li>
-            <li>20% Pool equipment set and start-up.</li>
-            <li>10% Upon completion and approval of the project.</li>
-          </ul>
-          <p><span className="font-semibold">Payment Methods:</span> Check, Credit Card (3% fee), ACH (1% fee), or Direct Deposit for financed projects.</p>
-          <p className="font-semibold">4. Site Conditions</p>
-          <p>Client must provide property access, water, electricity, and clear the work area. Contractor is not responsible for unforeseen underground obstacles.</p>
-          <p className="font-semibold">5. Warranty</p>
-          <p>One year on labor and materials. Fiberglass shell — Lifetime (non-transferable). Pool Finish — Lifetime. Coping — one year. Equipment warranted per manufacturer terms.</p>
-          <p className="font-semibold">6. Termination</p>
-          <p>Planning, design, engineering, permitting, and administrative costs are non-refundable once services have begun.</p>
-          <p className="font-semibold">7. Dispute Resolution</p>
-          <p>Disputes will first be addressed through mediation before legal action in the appropriate jurisdiction.</p>
-          <p className="font-semibold">8. Governing Law: State of Virginia.</p>
-          <p className="font-semibold">Exclusions</p>
-          <p>Disposal of excavated dirt beyond 50&apos;, irrigation damage, painting/staining, sod/turf replacement, relocating existing utilities, site unknowns, and window/door alarms unless specified in writing.</p>
+        {/* Terms and Conditions — from proposal */}
+        <div className="text-xs text-gray-700 leading-relaxed">
+          <p className="font-bold text-sm text-[#1a3a5c] mb-4">Terms and Conditions</p>
+          {tc ? (
+            <div className="whitespace-pre-wrap">{tc}</div>
+          ) : (
+            <p className="text-gray-400 italic">No terms and conditions set for this proposal.</p>
+          )}
         </div>
 
         <div className="mt-10 pt-6 border-t border-gray-200">
@@ -296,7 +256,7 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
   )
 }
 
-// ─── Builder component ────────────────────────────────────────────────────────
+// ─── Builder ──────────────────────────────────────────────────────────────────
 
 function ProposalBuilder() {
   const searchParams = useSearchParams()
@@ -318,8 +278,6 @@ function ProposalBuilder() {
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
 
-  // ─── Load proposal ─────────────────────────────────────────────────────────
-
   async function loadProposal() {
     if (!proposalId) return
 
@@ -335,20 +293,11 @@ function ProposalBuilder() {
     }
 
     const { data: sectionsData } = await supabase
-      .from('proposal_sections')
-      .select('*')
-      .eq('proposal_id', proposalId)
-      .order('created_at', { ascending: true })
-
+      .from('proposal_sections').select('*').eq('proposal_id', proposalId).order('created_at', { ascending: true })
     const { data: itemsData } = await supabase
-      .from('proposal_items')
-      .select('*')
-      .eq('proposal_id', proposalId)
-
+      .from('proposal_items').select('*').eq('proposal_id', proposalId)
     const { data: rowsData } = await supabase
-      .from('proposal_item_rows')
-      .select('*')
-      .eq('proposal_id', proposalId)
+      .from('proposal_item_rows').select('*').eq('proposal_id', proposalId)
 
     const structured: ProposalSection[] = (sectionsData || []).map((section) => ({
       ...section,
@@ -367,10 +316,8 @@ function ProposalBuilder() {
 
   async function loadTemplates() {
     const { data, error } = await supabase
-      .from('templates')
-      .select('id, name, description')
-      .order('created_at', { ascending: true })
-    if (error) { console.error('Error loading templates:', error); return }
+      .from('templates').select('id, name, description').order('created_at', { ascending: true })
+    if (error) { console.error(error); return }
     setTemplates(data || [])
   }
 
@@ -379,39 +326,21 @@ function ProposalBuilder() {
     loadTemplates()
   }, [proposalId])
 
-  // ─── Send for signature ────────────────────────────────────────────────────
-
   async function sendForSignature() {
     if (!proposalId || isSending) return
-
-    if (isDirty) {
-      alert('Please save the proposal before sending for signature.')
-      return
-    }
-
-    const confirmed = window.confirm(
-      `This will send the proposal to the client for electronic signature. Continue?`
-    )
+    if (isDirty) { alert('Please save the proposal before sending for signature.'); return }
+    const confirmed = window.confirm('This will send the proposal to the client for electronic signature. Continue?')
     if (!confirmed) return
 
-    setIsSending(true)
-    setSendError(null)
-    setSendSuccess(false)
-
+    setIsSending(true); setSendError(null); setSendSuccess(false)
     try {
       const res = await fetch('/api/send-for-signature', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proposalId }),
       })
-
       const data = await res.json()
-
-      if (!res.ok) {
-        setSendError(data.error || 'Failed to send for signature.')
-        return
-      }
-
+      if (!res.ok) { setSendError(data.error || 'Failed to send for signature.'); return }
       setSendSuccess(true)
       setProposalStatus('sent')
     } catch (err: any) {
@@ -421,30 +350,27 @@ function ProposalBuilder() {
     }
   }
 
-  // ─── Load template ─────────────────────────────────────────────────────────
-
   async function handleLoadTemplate() {
     if (!selectedTemplateId || !proposalId) return
-
     const confirmReplace = sections.length > 0
       ? window.confirm('This will replace all existing content in this proposal. Continue?')
       : true
     if (!confirmReplace) return
 
-    setIsLoadingTemplate(true)
-    setTemplateError(null)
-
+    setIsLoadingTemplate(true); setTemplateError(null)
     try {
+      // Fetch template with T&C
+      const { data: templateData } = await supabase
+        .from('templates').select('terms_and_conditions').eq('id', selectedTemplateId).single()
+
       const { data: tSections, error: tsErr } = await supabase
-        .from('template_sections').select('*')
-        .eq('template_id', selectedTemplateId).order('sort_order', { ascending: true })
+        .from('template_sections').select('*').eq('template_id', selectedTemplateId).order('sort_order', { ascending: true })
       if (tsErr) throw tsErr
       if (!tSections || tSections.length === 0) throw new Error('No sections found in this template.')
 
       const tSectionIds = tSections.map((s: any) => s.id)
       const { data: tItems, error: tiErr } = await supabase
-        .from('template_items').select('*')
-        .in('section_id', tSectionIds).order('sort_order', { ascending: true })
+        .from('template_items').select('*').in('section_id', tSectionIds).order('sort_order', { ascending: true })
       if (tiErr) throw tiErr
 
       const catalogItemIds = (tItems || []).map((i: any) => i.catalog_item_id).filter(Boolean)
@@ -468,6 +394,11 @@ function ProposalBuilder() {
       await supabase.from('proposal_item_rows').delete().eq('proposal_id', proposalId)
       await supabase.from('proposal_items').delete().eq('proposal_id', proposalId)
       await supabase.from('proposal_sections').delete().eq('proposal_id', proposalId)
+
+      // Copy T&C from template to proposal
+      await supabase.from('proposals')
+        .update({ terms_and_conditions: templateData?.terms_and_conditions || null })
+        .eq('id', proposalId)
 
       const newSections = tSections.map((ts: any) => ({
         id: crypto.randomUUID(), proposal_id: proposalId, name: ts.name, _tid: ts.id,
@@ -516,8 +447,6 @@ function ProposalBuilder() {
     }
   }
 
-  // ─── Update helpers ────────────────────────────────────────────────────────
-
   function updateItem(sectionIndex: number, itemIndex: number, field: keyof ProposalItem, value: any) {
     setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : {
       ...s, items: s.items.map((item, ii) => ii !== itemIndex ? item : { ...item, [field]: value })
@@ -536,8 +465,6 @@ function ProposalBuilder() {
 
   function markDirty() { setIsDirty(true); setSaveStatus('unsaved') }
 
-  // ─── Save ──────────────────────────────────────────────────────────────────
-
   async function saveProposal() {
     if (!proposalId || isSaving) return
     setIsSaving(true); setSaveStatus('saving')
@@ -546,7 +473,6 @@ function ProposalBuilder() {
         iT + i.rows.reduce((rT, r) => rT + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0), 0)
 
       await supabase.from('proposals').update({ title: proposalTitle, total_price: total }).eq('id', proposalId)
-
       await supabase.from('proposal_sections').upsert(
         sections.map((s) => ({ id: s.id, proposal_id: proposalId, name: s.name })), { onConflict: 'id' })
 
@@ -587,7 +513,6 @@ function ProposalBuilder() {
   const proposalTotal = sections.reduce((sT, s) => sT + s.items.reduce((iT, i) =>
     iT + i.rows.reduce((rT, r) => rT + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0), 0)
 
-  // Status badge
   const statusColors: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-600',
     sent: 'bg-amber-100 text-amber-700',
@@ -600,7 +525,6 @@ function ProposalBuilder() {
   return (
     <div className="flex min-h-screen bg-[#f4f7fb]">
 
-      {/* SIDEBAR */}
       <aside className="w-60 bg-white border-r border-gray-100 p-6 shadow-sm flex-shrink-0 print:hidden">
         <h2 className="text-xl font-semibold mb-8">CRM</h2>
         <nav className="flex flex-col gap-3 text-sm">
@@ -612,10 +536,8 @@ function ProposalBuilder() {
         </nav>
       </aside>
 
-      {/* MAIN */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* TOP BAR */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-10 py-4 flex items-center justify-between shadow-sm print:hidden">
           <div className="flex items-center gap-3">
             <input
@@ -624,28 +546,22 @@ function ProposalBuilder() {
               onChange={(e) => { setProposalTitle(e.target.value); markDirty() }}
               placeholder="Proposal name"
             />
-            {/* Status badge */}
             <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${statusColors[proposalStatus] || statusColors.draft}`}>
               {proposalStatus}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Tabs */}
             <div className="flex border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setActiveTab('builder')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === 'builder' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'builder' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
               >
                 Builder
               </button>
               <button
                 onClick={() => setActiveTab('preview')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === 'preview' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'preview' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
               >
                 Preview
               </button>
@@ -665,41 +581,29 @@ function ProposalBuilder() {
             <button
               onClick={saveProposal}
               disabled={isSaving || !isDirty}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isDirty && !isSaving ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${isDirty && !isSaving ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
               {isSaving ? 'Saving…' : 'Save'}
             </button>
 
-            {/* Send for Signature button */}
             {proposalStatus !== 'signed' && (
               <button
                 onClick={sendForSignature}
                 disabled={isSending || sections.length === 0}
-                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  !isSending && sections.length > 0
-                    ? 'bg-purple-600 text-white hover:bg-purple-700'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!isSending && sections.length > 0 ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
               >
                 {isSending ? 'Sending…' : proposalStatus === 'sent' || proposalStatus === 'viewed' ? 'Resend for Signature' : 'Send for Signature'}
               </button>
             )}
 
             {proposalStatus === 'signed' && (
-              <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700">
-                ✓ Signed
-              </span>
+              <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700">✓ Signed</span>
             )}
           </div>
         </div>
 
-        {/* Send error / success messages */}
         {sendError && (
-          <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden">
-            {sendError}
-          </div>
+          <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden">{sendError}</div>
         )}
         {sendSuccess && (
           <div className="mx-10 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 print:hidden">
@@ -707,14 +611,12 @@ function ProposalBuilder() {
           </div>
         )}
 
-        {/* PREVIEW TAB */}
         {activeTab === 'preview' && (
           <div className="flex-1 overflow-y-auto bg-gray-100">
             <ProposalPreview proposalId={proposalId} proposalTitle={proposalTitle} />
           </div>
         )}
 
-        {/* BUILDER TAB */}
         {activeTab === 'builder' && (
           <div className="p-10 overflow-y-auto">
 
@@ -734,9 +636,7 @@ function ProposalBuilder() {
                 <button
                   onClick={handleLoadTemplate}
                   disabled={!selectedTemplateId || isLoadingTemplate}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedTemplateId && !isLoadingTemplate ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
+                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${selectedTemplateId && !isLoadingTemplate ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                 >
                   {isLoadingTemplate ? 'Loading…' : 'Load Template'}
                 </button>
