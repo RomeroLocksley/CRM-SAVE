@@ -6,32 +6,58 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+function extractJsonFromMultipart(body: string): string | null {
+  // Find the json field value in multipart form data
+  // Look for: name="json"\r\n\r\n{...}\r\n
+  const match = body.match(/name="json"\r?\n\r?\n([\s\S]*?)(\r?\n---)/)
+  if (match) return match[1].trim()
+
+  // Fallback: find anything that looks like a JSON object starting with {"signature_request"
+  const jsonMatch = body.match(/(\{"signature_request"[\s\S]*?\})(\r?\n---)/)
+  if (jsonMatch) return jsonMatch[1].trim()
+
+  return null
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text()
-    console.log('Webhook body preview:', body.substring(0, 300))
+    console.log('Webhook body preview:', body.substring(0, 200))
 
     let event: any = null
 
-    // Try form-encoded first (json= field)
-    const params = new URLSearchParams(body)
-    const jsonPayload = params.get('json')
+    // Check content type
+    const contentType = req.headers.get('content-type') || ''
+    console.log('Content-Type:', contentType)
 
-    if (jsonPayload) {
-      console.log('Parsing form-encoded JSON')
-      event = JSON.parse(jsonPayload)
+    if (contentType.includes('multipart/form-data')) {
+      // Parse multipart form data manually
+      const jsonStr = extractJsonFromMultipart(body)
+      console.log('Extracted JSON string:', jsonStr?.substring(0, 200))
+      if (jsonStr) {
+        try {
+          event = JSON.parse(jsonStr)
+        } catch (e) {
+          console.error('Failed to parse extracted JSON:', e)
+        }
+      }
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const params = new URLSearchParams(body)
+      const jsonPayload = params.get('json')
+      if (jsonPayload) event = JSON.parse(jsonPayload)
     } else {
-      // Try parsing body directly as JSON
+      // Try direct JSON parse
       try {
         event = JSON.parse(body)
-        console.log('Parsed body directly as JSON')
       } catch {
-        console.log('Could not parse body as JSON either')
+        // Try multipart as fallback
+        const jsonStr = extractJsonFromMultipart(body)
+        if (jsonStr) event = JSON.parse(jsonStr)
       }
     }
 
     if (!event) {
-      console.log('No event parsed, returning')
+      console.log('Could not parse event')
       return new NextResponse('Hello API Event Received', { status: 200 })
     }
 
@@ -43,12 +69,11 @@ export async function POST(req: NextRequest) {
     console.log('Signature request ID:', signatureRequestId)
 
     if (eventType === 'callback_test') {
-      console.log('Callback test received')
       return new NextResponse('Hello API Event Received', { status: 200 })
     }
 
     if (eventType === 'signature_request_signed' && signatureRequestId) {
-      console.log('Signed event — looking up proposal')
+      console.log('Processing signed event for:', signatureRequestId)
 
       const { data: proposal, error: findError } = await supabase
         .from('proposals')
@@ -56,7 +81,7 @@ export async function POST(req: NextRequest) {
         .eq('signature_request_id', signatureRequestId)
         .single()
 
-      console.log('Proposal lookup result:', proposal, 'Error:', findError)
+      console.log('Proposal found:', proposal, 'Error:', findError)
 
       if (proposal) {
         const { error: updateError } = await supabase
@@ -67,13 +92,12 @@ export async function POST(req: NextRequest) {
           })
           .eq('id', proposal.id)
 
-        console.log('Update result error:', updateError)
+        console.log('Update error:', updateError)
       } else {
-        // Log all proposals to see what signature_request_ids exist
         const { data: allProposals } = await supabase
           .from('proposals')
           .select('id, signature_request_id, status')
-        console.log('All proposals:', JSON.stringify(allProposals))
+        console.log('All proposals signature IDs:', JSON.stringify(allProposals?.map(p => ({ id: p.id, sig: p.signature_request_id, status: p.status }))))
       }
     }
 
@@ -89,7 +113,6 @@ export async function POST(req: NextRequest) {
           .from('proposals')
           .update({ status: 'viewed' })
           .eq('id', proposal.id)
-        console.log('Updated to viewed')
       }
     }
 
