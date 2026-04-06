@@ -128,7 +128,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
   return (
     <>
-      {/* Print button — hidden when printing */}
       <div className="flex justify-end px-10 pt-6 print:hidden">
         <button
           onClick={() => window.print()}
@@ -138,10 +137,8 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
         </button>
       </div>
 
-      {/* Preview document */}
       <div id="proposal-preview" className="bg-white mx-auto my-6 p-12 shadow-lg print:shadow-none print:my-0 print:p-8" style={{ maxWidth: '850px' }}>
 
-        {/* Header */}
         <div className="flex items-center justify-center mb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.jpg" alt="K&D Contracting" className="w-16 h-16 mr-4 object-contain" />
@@ -154,7 +151,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
         <hr className="border-[#1a3a5c] border-t-2 my-4" />
 
-        {/* Client info */}
         <div className="flex justify-between items-start mb-6">
           <div className="text-sm">
             <p className="font-semibold">{lead?.name}</p>
@@ -169,10 +165,8 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
           </div>
         </div>
 
-        {/* Proposal title */}
         <h1 className="text-2xl font-bold text-[#1a3a5c] mb-6">{proposalTitle}</h1>
 
-        {/* Contract services intro */}
         <div className="mb-6">
           <p className="font-bold text-sm mb-1">CONTRACT SERVICES</p>
           <p className="font-semibold text-sm mb-2">Description of the Services:</p>
@@ -183,7 +177,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
         <hr className="border-gray-200 mb-6" />
 
-        {/* Sections */}
         {sections.map((section) => {
           const sectionTotal = section.items.reduce((sum, item) =>
             sum + item.rows.reduce((rSum, row) =>
@@ -192,7 +185,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
           return (
             <div key={section.id} className="mb-8">
               <h2 className="text-sm font-bold text-[#1a3a5c] uppercase mb-2">{section.name}</h2>
-
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-[#e8f0f7]">
@@ -206,9 +198,7 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
                     <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#f7fafc]'}>
                       <td className="px-3 py-2 font-semibold border border-gray-200 align-top">{item.name}</td>
                       <td className="px-3 py-2 text-gray-700 border border-gray-200 align-top whitespace-pre-line">{item.description}</td>
-                      <td className="px-3 py-2 border border-gray-200 align-top">
-                        {formatQtyUnit(item.display_quantity, item.display_unit)}
-                      </td>
+                      <td className="px-3 py-2 border border-gray-200 align-top">{formatQtyUnit(item.display_quantity, item.display_unit)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -227,7 +217,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
           )
         })}
 
-        {/* Grand total */}
         <hr className="border-[#1a3a5c] border-t mb-4" />
         <div className="text-right mb-8">
           <p className="text-lg font-bold text-[#1a3a5c]">
@@ -237,35 +226,24 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
         <hr className="border-gray-200 mb-6" />
 
-        {/* Terms and Conditions */}
         <div className="text-xs text-gray-700 leading-relaxed space-y-3">
           <p className="font-bold text-sm text-[#1a3a5c]">Terms and Conditions</p>
-
           <p className="font-semibold">1. Terms and Conditions</p>
           <p>The contractor agrees to design, supply materials, and install a fiberglass pool according to the specifications detailed in the agreed plans and the scope of work outlined below:</p>
-          <p><span className="font-semibold">b) Planning and Permits:</span> This includes the review and approval of plans by a certified engineer, as well as the comprehensive management and acquisition of all required permits. The contractor will coordinate all required inspections to ensure regulatory compliance throughout the construction process. The contractor makes a good faith effort to evaluate site conditions, including but not limited to available soil information, Resource Protection Areas (RPA), septic system locations and setbacks, property setbacks, and applicable zoning or HOA requirements. However, final approvals are subject to third-party entities such as counties, municipalities, and homeowners associations.</p>
-          <p><span className="font-semibold">c) Excavation and Site Preparation:</span> This phase includes mobilization of specialized equipment for excavation of the pool to the agreed dimensions. Clean #68 gravel will be provided and used for proper base preparation. Excavation is based on normal soil conditions. If unforeseen conditions such as large boulders, rock formations, groundwater, unsuitable soils, or other subsurface obstructions are encountered, additional costs may apply. Any such changes will be discussed with and approved by the homeowner prior to proceeding.</p>
-          <p><span className="font-semibold">d) Fiberglass Shell Installation and Backfill:</span> The fiberglass pool shell will be delivered, set, and leveled in accordance with manufacturer specifications. Backfilling around the pool shell will be completed using clean #68 gravel only. No excavated soil will be used for backfilling against the pool shell. The pool shell will be filled with water at the same time as the backfilling process to maintain equalized pressure on the shell and ensure proper structural support during installation. A reinforced concrete bond beam will be installed around the perimeter of the pool.</p>
-          <p><span className="font-semibold">e) Plumbing and Electrical Installation:</span> Excavation and trenching for plumbing and electrical lines will be performed. This includes the supply and installation of all necessary PVC piping, fittings, and electrical conduits for pool circulation, lighting, and equipment. All plumbing lines will be pressure tested prior to backfilling.</p>
-          <p><span className="font-semibold">f) Equipment Installation:</span> Provision and installation of essential pool equipment including pumps, filters, and lighting systems, installed in accordance with manufacturer specifications and local code requirements.</p>
-          <p><span className="font-semibold">g) Drainage and Groundwater Management:</span> A gravel drainage layer will be installed around the pool shell using #68 gravel to promote proper drainage and reduce hydrostatic pressure.</p>
-          <p><span className="font-semibold">h) Backfill for Grading and Site Restoration:</span> Excavated soil will be reused for general site grading only and will not be used for backfilling around the pool shell. Soil used for grading will be spread, graded, and compacted in lifts of approximately 6 inches.</p>
-          <p><span className="font-semibold">i) Completion and General Conditions:</span> Final connections and comprehensive testing of all plumbing and electrical systems will be performed to ensure proper operation.</p>
-          <p><span className="font-semibold">j) Groundwater and Pool Uplift Disclaimer:</span> The homeowner acknowledges that fiberglass pools are subject to hydrostatic pressure from groundwater conditions. The contractor is not responsible for damage, movement, or floating of the pool shell caused by homeowner lowering or draining the pool without proper precautions.</p>
-
+          <p><span className="font-semibold">b) Planning and Permits:</span> This includes the review and approval of plans by a certified engineer, as well as the comprehensive management and acquisition of all required permits. The contractor will coordinate all required inspections to ensure regulatory compliance throughout the construction process.</p>
+          <p><span className="font-semibold">c) Excavation and Site Preparation:</span> This phase includes mobilization of specialized equipment for excavation of the pool to the agreed dimensions. Clean #68 gravel will be provided and used for proper base preparation. Excavation is based on normal soil conditions. If unforeseen conditions are encountered, additional costs may apply and will be discussed with the homeowner prior to proceeding.</p>
+          <p><span className="font-semibold">d) Fiberglass Shell Installation and Backfill:</span> The fiberglass pool shell will be delivered, set, and leveled in accordance with manufacturer specifications. Backfilling will be completed using clean #68 gravel only. The pool shell will be filled with water simultaneously with backfilling to maintain equalized pressure.</p>
+          <p><span className="font-semibold">e) Plumbing and Electrical Installation:</span> Excavation and trenching for plumbing and electrical lines will be performed. All plumbing lines will be pressure tested prior to backfilling.</p>
+          <p><span className="font-semibold">f) Equipment Installation:</span> Provision and installation of essential pool equipment including pumps, filters, and lighting systems.</p>
+          <p><span className="font-semibold">g) Drainage and Groundwater Management:</span> A gravel drainage layer will be installed around the pool shell using #68 gravel.</p>
+          <p><span className="font-semibold">h) Backfill for Grading:</span> Excavated soil will be reused for general site grading only and will not be used for backfilling against the pool shell.</p>
+          <p><span className="font-semibold">i) Completion:</span> Final connections and comprehensive testing of all plumbing and electrical systems will be performed.</p>
+          <p><span className="font-semibold">j) Groundwater Disclaimer:</span> The contractor is not responsible for damage caused by homeowner lowering or draining the pool without proper precautions.</p>
           <p className="font-semibold">1.2 Changes in Scope of Work:</p>
-          <p>Any modifications to the scope of work during the project must be agreed upon in writing through a Change Order or Addendum. These changes may result in adjustments to both the cost and schedule of the project and require approval from both parties.</p>
-          <p><span className="font-semibold">1.3 Written Document:</span> Any accepted modification must be formalized through a Change Order or Addendum detailing the new costs.</p>
-          <p><span className="font-semibold">1.4 Signature and Approval:</span> Change Orders or Addendums require written approval and signatures from both parties before implementation.</p>
-          <p><span className="font-semibold">1.5 Payment Terms:</span> Change Orders or Addendums must be paid 50% upon signing and the remaining 50% upon completion. Any agreements made with the sales agent must be formalized in writing and signed by both parties; verbal agreements will not be valid.</p>
-
+          <p>Any modifications must be agreed upon in writing through a Change Order or Addendum signed by both parties. Verbal agreements will not be valid.</p>
           <p className="font-semibold">2. Timelines</p>
-          <p><span className="font-semibold">2.1 Administrative Management:</span> Administrative management of your project will begin immediately after receiving the initial payment. This administrative phase is estimated to take approximately 6 weeks from receipt of the initial payment, subject to variations due to the engineer&apos;s workload and county permit processing times.</p>
-          <p><span className="font-semibold">2.2 Project Execution:</span> The contractor will notify the client once construction permits are approved by the County. Once construction tasks commence on-site, completion is estimated to take approximately 60 calendar days, subject to external factors beyond the contractor&apos;s control.</p>
-          <p><span className="font-semibold">2.3 Builder Trend Schedule:</span> Our team works hard to keep our clients updated on the progress of your project. This schedule reflects our projected schedule and may be updated by our field team at any time to reflect construction delays.</p>
-
+          <p><span className="font-semibold">2.1</span> Administrative management begins immediately after the initial payment (approx. 6 weeks). <span className="font-semibold">2.2</span> Construction is estimated at approximately 60 calendar days once permits are approved.</p>
           <p className="font-semibold">3. Payments</p>
-          <p><span className="font-semibold">3.1 Regular Payment Schedule:</span></p>
           <ul className="list-disc ml-5 space-y-0.5">
             <li>10% Upon signing the contract.</li>
             <li>30% After permits are approved.</li>
@@ -273,30 +251,20 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
             <li>20% Pool equipment set and start-up.</li>
             <li>10% Upon completion and approval of the project.</li>
           </ul>
-          <p><span className="font-semibold">3.2 Financing Payment Schedule:</span> If financing is obtained through Lyon Financial or another institution, the payment schedule will be determined by that financial entity.</p>
-          <p><span className="font-semibold">3.3 Available Payment Methods:</span> Check (payable to K&amp;D Contracting LLC), Credit Card (3% fee), ACH Payment (1% fee), or Direct Deposit for financed projects.</p>
-
+          <p><span className="font-semibold">Payment Methods:</span> Check, Credit Card (3% fee), ACH (1% fee), or Direct Deposit for financed projects.</p>
           <p className="font-semibold">4. Site Conditions</p>
-          <p>a) Property Access: The client agrees to provide safe and clear access to the property during construction hours. b) Access to Water and Electricity: The client will ensure continuous access to potable water and electricity. c) Clearing the Work Area: The client must clear the work area of any items that may interfere with construction. d) Pets: All pets must be kept away from the work area during construction. e) Underground Obstacles: The contractor is not responsible for damage to unforeseen underground obstacles.</p>
-
-          <p className="font-semibold">5. Warranty and Liability</p>
-          <p>a) Warranty Coverage: The contractor provides a warranty on labor and materials for one year from the date of completion. All equipment will be warranted by the manufacturer per the Magnuson Act, and K&amp;D will assist with all warranty claims.</p>
-          <p><span className="font-semibold">5.1 Other Warranties:</span> Non-Transferrable: Tile — one year; Fiberglass — Lifetime (non-transferable); Pool Finish — Lifetime; Coping — one year. Transferrable: Auto Cover — three-year motor/components warranty, seven-year fabric warranty.</p>
-
+          <p>Client must provide property access, water, electricity, and clear the work area. Contractor is not responsible for unforeseen underground obstacles.</p>
+          <p className="font-semibold">5. Warranty</p>
+          <p>One year on labor and materials. Fiberglass shell — Lifetime (non-transferable). Pool Finish — Lifetime. Coping — one year. Equipment warranted per manufacturer terms.</p>
           <p className="font-semibold">6. Termination</p>
-          <p>The homeowner acknowledges that a portion of the contract price is allocated to planning, design, engineering, permitting, and administrative services, which are initiated the day after contract approval and receipt of deposit. All costs associated with these services become non-refundable once begun.</p>
-
+          <p>Planning, design, engineering, permitting, and administrative costs are non-refundable once services have begun.</p>
           <p className="font-semibold">7. Dispute Resolution</p>
-          <p>Any disputes will first be addressed through mediation before pursuing legal action in the appropriate jurisdiction.</p>
-
-          <p className="font-semibold">8. Miscellaneous</p>
-          <p>This contract constitutes the entire agreement between the parties and supersedes all prior agreements. Governing Law: State of Virginia.</p>
-
+          <p>Disputes will first be addressed through mediation before legal action in the appropriate jurisdiction.</p>
+          <p className="font-semibold">8. Governing Law: State of Virginia.</p>
           <p className="font-semibold">Exclusions</p>
-          <p>The following matters are excluded from the work unless specified in writing: a) Disposal of excavated dirt beyond 50&apos; of excavation site. b) Re-attachment of railings/fencing removed during construction. c) Damage to existing irrigation lines. d) Drainage and downspout extension damage. e) Painting and staining. f) Conduit and connections for utilities outside pool services. g) Damage to existing finishes unless caused by K&amp;D gross negligence. h) Sod, turf replacement, and topsoil. i) Relocating existing utilities. j) Repair of cut cable lines. k) Site unknowns including sub-surface conditions. l) Window/Door alarms required by code.</p>
+          <p>Disposal of excavated dirt beyond 50&apos;, irrigation damage, painting/staining, sod/turf replacement, relocating existing utilities, site unknowns, and window/door alarms unless specified in writing.</p>
         </div>
 
-        {/* Signature block */}
         <div className="mt-10 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-600 mb-6">I confirm that my action here represents my electronic signature and is binding.</p>
           <div className="grid grid-cols-2 gap-8">
@@ -317,7 +285,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
       </div>
 
-      {/* Print styles */}
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -338,9 +305,13 @@ function ProposalBuilder() {
   const [activeTab, setActiveTab] = useState<'builder' | 'preview'>('builder')
   const [sections, setSections] = useState<ProposalSection[]>([])
   const [proposalTitle, setProposalTitle] = useState('New Proposal')
+  const [proposalStatus, setProposalStatus] = useState<string>('draft')
   const [isSaving, setIsSaving] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved')
+  const [isSending, setIsSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [sendSuccess, setSendSuccess] = useState(false)
 
   const [templates, setTemplates] = useState<Template[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
@@ -354,11 +325,14 @@ function ProposalBuilder() {
 
     const { data: proposalData } = await supabase
       .from('proposals')
-      .select('title')
+      .select('title, status')
       .eq('id', proposalId)
       .single()
 
-    if (proposalData) setProposalTitle(proposalData.title || 'New Proposal')
+    if (proposalData) {
+      setProposalTitle(proposalData.title || 'New Proposal')
+      setProposalStatus(proposalData.status || 'draft')
+    }
 
     const { data: sectionsData } = await supabase
       .from('proposal_sections')
@@ -404,6 +378,48 @@ function ProposalBuilder() {
     loadProposal()
     loadTemplates()
   }, [proposalId])
+
+  // ─── Send for signature ────────────────────────────────────────────────────
+
+  async function sendForSignature() {
+    if (!proposalId || isSending) return
+
+    if (isDirty) {
+      alert('Please save the proposal before sending for signature.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `This will send the proposal to the client for electronic signature. Continue?`
+    )
+    if (!confirmed) return
+
+    setIsSending(true)
+    setSendError(null)
+    setSendSuccess(false)
+
+    try {
+      const res = await fetch('/api/send-for-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposalId }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setSendError(data.error || 'Failed to send for signature.')
+        return
+      }
+
+      setSendSuccess(true)
+      setProposalStatus('sent')
+    } catch (err: any) {
+      setSendError(err.message || 'Something went wrong.')
+    } finally {
+      setIsSending(false)
+    }
+  }
 
   // ─── Load template ─────────────────────────────────────────────────────────
 
@@ -571,6 +587,14 @@ function ProposalBuilder() {
   const proposalTotal = sections.reduce((sT, s) => sT + s.items.reduce((iT, i) =>
     iT + i.rows.reduce((rT, r) => rT + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0), 0)
 
+  // Status badge
+  const statusColors: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-600',
+    sent: 'bg-amber-100 text-amber-700',
+    viewed: 'bg-blue-100 text-blue-700',
+    signed: 'bg-green-100 text-green-700',
+  }
+
   if (!proposalId) return <p className="p-10 text-gray-400">No proposal ID provided.</p>
 
   return (
@@ -593,12 +617,18 @@ function ProposalBuilder() {
 
         {/* TOP BAR */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-10 py-4 flex items-center justify-between shadow-sm print:hidden">
-          <input
-            className="text-xl font-semibold bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-1 py-0.5 transition-colors w-72"
-            value={proposalTitle}
-            onChange={(e) => { setProposalTitle(e.target.value); markDirty() }}
-            placeholder="Proposal name"
-          />
+          <div className="flex items-center gap-3">
+            <input
+              className="text-xl font-semibold bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-1 py-0.5 transition-colors w-64"
+              value={proposalTitle}
+              onChange={(e) => { setProposalTitle(e.target.value); markDirty() }}
+              placeholder="Proposal name"
+            />
+            {/* Status badge */}
+            <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${statusColors[proposalStatus] || statusColors.draft}`}>
+              {proposalStatus}
+            </span>
+          </div>
 
           <div className="flex items-center gap-3">
             {/* Tabs */}
@@ -641,8 +671,41 @@ function ProposalBuilder() {
             >
               {isSaving ? 'Saving…' : 'Save'}
             </button>
+
+            {/* Send for Signature button */}
+            {proposalStatus !== 'signed' && (
+              <button
+                onClick={sendForSignature}
+                disabled={isSending || sections.length === 0}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  !isSending && sections.length > 0
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isSending ? 'Sending…' : proposalStatus === 'sent' || proposalStatus === 'viewed' ? 'Resend for Signature' : 'Send for Signature'}
+              </button>
+            )}
+
+            {proposalStatus === 'signed' && (
+              <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700">
+                ✓ Signed
+              </span>
+            )}
           </div>
         </div>
+
+        {/* Send error / success messages */}
+        {sendError && (
+          <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden">
+            {sendError}
+          </div>
+        )}
+        {sendSuccess && (
+          <div className="mx-10 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 print:hidden">
+            ✓ Proposal sent successfully! The client will receive an email with a link to review and sign.
+          </div>
+        )}
 
         {/* PREVIEW TAB */}
         {activeTab === 'preview' && (
@@ -655,7 +718,6 @@ function ProposalBuilder() {
         {activeTab === 'builder' && (
           <div className="p-10 overflow-y-auto">
 
-            {/* Template loader */}
             <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8 shadow-sm">
               <p className="text-sm font-medium text-gray-600 mb-3">Load a template</p>
               <div className="flex items-center gap-3">
@@ -696,7 +758,6 @@ function ProposalBuilder() {
 
                   return (
                     <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-5 mb-5 shadow-sm">
-
                       <div className="mb-4">
                         <p className="text-xs font-medium text-gray-400 uppercase mb-2">Display (customer-facing)</p>
                         <div className="grid grid-cols-4 gap-3">
