@@ -215,7 +215,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
         <hr className="border-gray-200 mb-6" />
 
-        {/* Terms and Conditions — from proposal */}
         <div className="text-xs text-gray-700 leading-relaxed">
           <p className="font-bold text-sm text-[#1a3a5c] mb-4">Terms and Conditions</p>
           {tc ? (
@@ -359,7 +358,6 @@ function ProposalBuilder() {
 
     setIsLoadingTemplate(true); setTemplateError(null)
     try {
-      // Fetch template with T&C
       const { data: templateData } = await supabase
         .from('templates').select('terms_and_conditions').eq('id', selectedTemplateId).single()
 
@@ -395,7 +393,6 @@ function ProposalBuilder() {
       await supabase.from('proposal_items').delete().eq('proposal_id', proposalId)
       await supabase.from('proposal_sections').delete().eq('proposal_id', proposalId)
 
-      // Copy T&C from template to proposal
       await supabase.from('proposals')
         .update({ terms_and_conditions: templateData?.terms_and_conditions || null })
         .eq('id', proposalId)
@@ -523,8 +520,10 @@ function ProposalBuilder() {
   if (!proposalId) return <p className="p-10 text-gray-400">No proposal ID provided.</p>
 
   return (
-    <div className="flex min-h-screen bg-[#f4f7fb]">
+    // ── KEY FIX: h-screen instead of min-h-screen ──────────────────────────
+    <div className="flex h-screen bg-[#f4f7fb] overflow-hidden">
 
+      {/* SIDEBAR — no scroll, stays fixed */}
       <aside className="w-60 bg-white border-r border-gray-100 p-6 shadow-sm flex-shrink-0 print:hidden">
         <h2 className="text-xl font-semibold mb-8">CRM</h2>
         <nav className="flex flex-col gap-3 text-sm">
@@ -536,9 +535,11 @@ function ProposalBuilder() {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* MAIN — scrolls independently */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-10 py-4 flex items-center justify-between shadow-sm print:hidden">
+        {/* TOP BAR — sticky within the main column */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-10 py-4 flex items-center justify-between shadow-sm print:hidden">
           <div className="flex items-center gap-3">
             <input
               className="text-xl font-semibold bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-1 py-0.5 transition-colors w-64"
@@ -603,14 +604,15 @@ function ProposalBuilder() {
         </div>
 
         {sendError && (
-          <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden">{sendError}</div>
+          <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden flex-shrink-0">{sendError}</div>
         )}
         {sendSuccess && (
-          <div className="mx-10 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 print:hidden">
+          <div className="mx-10 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 print:hidden flex-shrink-0">
             ✓ Proposal sent successfully! The client will receive an email with a link to review and sign.
           </div>
         )}
 
+        {/* SCROLLABLE CONTENT AREA */}
         {activeTab === 'preview' && (
           <div className="flex-1 overflow-y-auto bg-gray-100">
             <ProposalPreview proposalId={proposalId} proposalTitle={proposalTitle} />
@@ -618,7 +620,7 @@ function ProposalBuilder() {
         )}
 
         {activeTab === 'builder' && (
-          <div className="p-10 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-10">
 
             <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8 shadow-sm">
               <p className="text-sm font-medium text-gray-600 mb-3">Load a template</p>
