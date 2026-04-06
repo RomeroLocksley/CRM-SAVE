@@ -9,12 +9,16 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text()
+    console.log('Webhook raw body:', body.substring(0, 500))
 
-    // Dropbox Sign sends form-encoded data
+    // Dropbox Sign sends form-encoded data with a 'json' field
     const params = new URLSearchParams(body)
     const jsonPayload = params.get('json')
 
+    console.log('JSON payload:', jsonPayload?.substring(0, 500))
+
     if (!jsonPayload) {
+      console.log('No json payload found, returning early')
       return new NextResponse('Hello API Event Received', { status: 200 })
     }
 
@@ -23,32 +27,38 @@ export async function POST(req: NextRequest) {
     const signatureRequest = event?.signature_request
     const signatureRequestId = signatureRequest?.signature_request_id
 
-    // Dropbox Sign requires this exact response to confirm receipt
+    console.log('Event type:', eventType)
+    console.log('Signature request ID from webhook:', signatureRequestId)
+
     if (eventType === 'callback_test') {
       return new NextResponse('Hello API Event Received', { status: 200 })
     }
 
     if (eventType === 'signature_request_signed' && signatureRequestId) {
-      // Find the proposal with this signature request ID
-      const { data: proposal } = await supabase
+      console.log('Looking for proposal with signature_request_id:', signatureRequestId)
+
+      const { data: proposal, error } = await supabase
         .from('proposals')
         .select('id')
         .eq('signature_request_id', signatureRequestId)
         .single()
 
+      console.log('Proposal found:', proposal, 'Error:', error)
+
       if (proposal) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('proposals')
           .update({
             status: 'signed',
             signed_at: new Date().toISOString(),
           })
           .eq('id', proposal.id)
+
+        console.log('Update error:', updateError)
       }
     }
 
     if (eventType === 'signature_request_viewed' && signatureRequestId) {
-      // Optionally track when the client viewed the proposal
       const { data: proposal } = await supabase
         .from('proposals')
         .select('id, status')
@@ -67,7 +77,6 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     console.error('Webhook error:', err)
-    // Still return 200 so Dropbox Sign doesn't keep retrying
     return new NextResponse('Hello API Event Received', { status: 200 })
   }
 }
