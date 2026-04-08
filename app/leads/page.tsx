@@ -18,6 +18,37 @@ const SOURCES = [
   'Other',
 ]
 
+const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  new:         { bg: '#f5f5f5',  text: '#888',    label: 'New' },
+  appointment: { bg: '#FAEEDA',  text: '#633806', label: 'Appointment' },
+  proposal:    { bg: '#E6F1FB',  text: '#0C447C', label: 'Proposal' },
+  pending:     { bg: '#EDE9FE',  text: '#4C1D95', label: 'Pending' },
+}
+
+const RESULT_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  sold:        { bg: '#EAF3DE',  text: '#27500A', label: 'Sold' },
+  price_high:  { bg: '#FCEBEB',  text: '#7F1D1D', label: 'Price High' },
+  competitor:  { bg: '#FEF3C7',  text: '#78350F', label: 'Competitor' },
+  future:      { bg: '#E0F2FE',  text: '#0C4A6E', label: 'Future Date' },
+  finance:     { bg: '#F3E8FF',  text: '#581C87', label: 'Financing' },
+}
+
+function NavItem({ href, active, label, icon }: { href: string; active?: boolean; label: string; icon: React.ReactNode }) {
+  return (
+    <Link href={href} className="flex flex-col items-center gap-1" style={{ textDecoration: 'none' }}>
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+        style={{ background: active ? 'rgba(255,255,255,0.2)' : 'transparent' }}
+      >
+        {icon}
+      </div>
+      <span style={{ fontSize: '10px', color: active ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: active ? 500 : 400 }}>
+        {label}
+      </span>
+    </Link>
+  )
+}
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [selectedLead, setSelectedLead] = useState<any | null>(null)
@@ -26,6 +57,7 @@ export default function LeadsPage() {
   const [search, setSearch] = useState('')
   const [proposals, setProposals] = useState<any[]>([])
   const [serviceOptions, setServiceOptions] = useState<string[]>([])
+  const [showAddLead, setShowAddLead] = useState(false)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -33,8 +65,6 @@ export default function LeadsPage() {
   const [service, setService] = useState('')
   const [source, setSource] = useState('')
   const [address, setAddress] = useState('')
-  const [status, setStatus] = useState('new')
-  const [result, setResult] = useState('')
 
   async function getLeads() {
     const { data } = await supabase.from('leads').select('*')
@@ -47,73 +77,50 @@ export default function LeadsPage() {
 
   async function getServiceOptions() {
     const { data, error } = await supabase
-      .from('templates')
-      .select('name')
-      .order('created_at', { ascending: true })
+      .from('templates').select('name').order('created_at', { ascending: true })
     if (error) { console.error(error); return }
     setServiceOptions((data || []).map((t: any) => t.name))
   }
 
   async function getNotes(leadId: string) {
     const { data } = await supabase
-      .from('lead_notes')
-      .select('*')
-      .eq('lead_id', leadId)
-      .order('created_at', { ascending: false })
+      .from('lead_notes').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
     setNotes(data || [])
   }
 
   async function getProposals(leadId: string) {
     const { data, error } = await supabase
-      .from('proposals')
-      .select('*')
-      .eq('lead_id', leadId)
-      .order('created_at', { ascending: false })
-    if (error) { console.error('ERROR FETCHING PROPOSALS:', error); return }
+      .from('proposals').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
+    if (error) { console.error(error); return }
     setProposals(data || [])
   }
 
   async function addLead(e: React.FormEvent) {
     e.preventDefault()
-    await supabase.from('leads').insert([
-      { name, email, phone, service, source, address, status, result }
-    ])
+    if (!name.trim()) return
+    await supabase.from('leads').insert([{ name, email, phone, service, source, address, status: 'new' }])
     setName(''); setEmail(''); setPhone(''); setService('')
-    setSource(''); setAddress(''); setStatus('new'); setResult('')
+    setSource(''); setAddress('')
+    setShowAddLead(false)
     getLeads()
   }
 
   async function deleteLead(leadId: string, e: React.MouseEvent) {
     e.stopPropagation()
-
     const confirmed = window.confirm('Delete this lead and all its notes and proposals? This cannot be undone.')
     if (!confirmed) return
 
-    // Get all proposals for this lead
-    const { data: leadProposals } = await supabase
-      .from('proposals')
-      .select('id')
-      .eq('lead_id', leadId)
-
+    const { data: leadProposals } = await supabase.from('proposals').select('id').eq('lead_id', leadId)
     const proposalIds = (leadProposals || []).map((p: any) => p.id)
-
-    // Delete proposal data bottom-up
     if (proposalIds.length > 0) {
       await supabase.from('proposal_item_rows').delete().in('proposal_id', proposalIds)
       await supabase.from('proposal_items').delete().in('proposal_id', proposalIds)
       await supabase.from('proposal_sections').delete().in('proposal_id', proposalIds)
       await supabase.from('proposals').delete().in('id', proposalIds)
     }
-
-    // Delete notes
     await supabase.from('lead_notes').delete().eq('lead_id', leadId)
-
-    // Delete lead
     await supabase.from('leads').delete().eq('id', leadId)
-
-    // Close modal if this lead was selected
     if (selectedLead?.id === leadId) setSelectedLead(null)
-
     getLeads()
   }
 
@@ -122,7 +129,7 @@ export default function LeadsPage() {
     await supabase.from('lead_notes').insert([{
       lead_id: selectedLead.id,
       note: noteText,
-      created_by: 'You'
+      created_by: 'Henrry',
     }])
     setNoteText('')
     getNotes(selectedLead.id)
@@ -148,122 +155,140 @@ export default function LeadsPage() {
   )
 
   return (
-    <div className="flex min-h-screen bg-[#f4f7fb]">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#f4f7fb' }}>
 
-      {/* SIDEBAR */}
-      <aside className="w-60 bg-white border-r border-gray-100 p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-8">CRM</h2>
-        <nav className="flex flex-col gap-3 text-sm">
-          <Link href="/" className="text-gray-500 hover:text-blue-700">Dashboard</Link>
-          <Link href="/leads" className="text-blue-700 font-medium">Leads</Link>
-          <Link href="/projects" className="text-gray-500 hover:text-blue-700">Projects</Link>
-          <Link href="/catalog" className="text-gray-500 hover:text-blue-700">Catalog</Link>
-          <Link href="/templates" className="text-gray-500 hover:text-blue-700">Templates</Link>
-        </nav>
-      </aside>
-
-      {/* MAIN */}
-      <main className="flex-1 p-10 max-w-6xl">
-
-        <h1 className="text-3xl font-semibold mb-8">Leads</h1>
-
-        <input
-          className="w-full mb-6 bg-white border rounded-xl px-4 py-3 shadow-sm"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        {/* ADD LEAD FORM */}
-        <div className="bg-white rounded-2xl shadow-md p-6 mb-10">
-          <form onSubmit={addLead} className="grid grid-cols-2 gap-4">
-            <input
-              className="bg-gray-100 p-2 rounded-xl"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <input
-              className="bg-gray-100 p-2 rounded-xl"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <input
-              className="bg-gray-100 p-2 rounded-xl"
-              placeholder="Phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-            <input
-              className="bg-gray-100 p-2 rounded-xl"
-              placeholder="Address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-            />
-
-            {/* Service dropdown */}
-            <select
-              className="bg-gray-100 p-2 rounded-xl text-sm"
-              value={service}
-              onChange={(e) => setService(e.target.value)}
-            >
-              <option value="">— Select service —</option>
-              {serviceOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-
-            {/* Source dropdown */}
-            <select
-              className="bg-gray-100 p-2 rounded-xl text-sm"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-            >
-              <option value="">— Select source —</option>
-              {SOURCES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-
-            <button className="col-span-2 bg-blue-700 text-white py-2 rounded-xl">
-              Add Lead
-            </button>
-          </form>
+      {/* ── SLIM SIDEBAR ─────────────────────────────────────────────── */}
+      <aside className="flex flex-col items-center py-5 gap-5 flex-shrink-0" style={{ width: '68px', background: '#0C447C' }}>
+        <div className="mb-2" style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="2" width="5" height="5" rx="1" fill="white"/>
+            <rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.6"/>
+            <rect x="2" y="9" width="5" height="5" rx="1" fill="white" opacity="0.6"/>
+            <rect x="9" y="9" width="5" height="5" rx="1" fill="white" opacity="0.4"/>
+          </svg>
         </div>
 
-        {/* LEADS LIST */}
-        <div className="bg-white rounded-2xl shadow-md p-4">
-          <div className="space-y-3">
-            {filteredLeads.map((lead) => (
+        <NavItem href="/" label="Home" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 7.5L9 2l7 5.5V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinejoin="round"/>
+            <rect x="6.5" y="10" width="5" height="7" rx="0.5" fill="rgba(255,255,255,0.6)"/>
+          </svg>
+        }/>
+        <NavItem href="/leads" active label="Leads" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="6" r="3.5" stroke="white" strokeWidth="1.5"/>
+            <path d="M2 16c0-3.866 3.134-6 7-6s7 2.134 7 6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        }/>
+        <NavItem href="/projects" label="Projects" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="1" y="5" width="16" height="11" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <path d="M6 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <path d="M1 9h16" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          </svg>
+        }/>
+        <NavItem href="/catalog" label="Catalog" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M3 4h12M3 9h12M3 14h7" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        }/>
+        <NavItem href="/templates" label="Templates" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="1" y="1" width="16" height="5" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <rect x="1" y="9" width="7" height="8" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <rect x="10" y="9" width="7" height="8" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          </svg>
+        }/>
+      </aside>
+
+      {/* ── MAIN ─────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* Top bar */}
+        <div className="flex-shrink-0 flex items-center justify-between px-8 py-4" style={{ background: 'white', borderBottom: '0.5px solid #eee' }}>
+          <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Leads</h1>
+          <button
+            onClick={() => setShowAddLead(true)}
+            style={{ background: '#185FA5', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+          >
+            + Add Lead
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="flex-shrink-0 px-8 py-4">
+          <input
+            placeholder="Search leads..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '9px 14px', borderRadius: 10, border: '0.5px solid #e0e0e0', background: 'white', fontSize: 14, outline: 'none' }}
+          />
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8">
+          <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', overflow: 'hidden' }}>
+
+            {/* Column headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 130px 140px 160px 60px', padding: '9px 16px', borderBottom: '0.5px solid #f0f0f0', background: '#fafafa' }}>
+              {['Name', 'Address', 'Source', 'Status', 'Result', ''].map((h) => (
+                <span key={h} style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
+              ))}
+            </div>
+
+            {filteredLeads.length === 0 && (
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: '#bbb', fontSize: 14 }}>
+                No leads yet — click + Add Lead to get started.
+              </div>
+            )}
+
+            {filteredLeads.map((lead, i) => (
               <div
                 key={lead.id}
-                onClick={() => {
-                  setSelectedLead(lead)
-                  getNotes(lead.id)
-                  getProposals(lead.id)
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '180px 1fr 130px 140px 160px 60px',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderBottom: i < filteredLeads.length - 1 ? '0.5px solid #f5f5f5' : 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.1s',
+                  gap: 8,
                 }}
-                className="cursor-pointer px-4 py-4 rounded-xl border border-gray-100 hover:shadow-md flex items-center gap-4"
+                onMouseOver={(e) => (e.currentTarget.style.background = '#fafafa')}
+                onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
+                onClick={() => { setSelectedLead(lead); getNotes(lead.id); getProposals(lead.id) }}
               >
-                <div className="flex-1">
-                  <p className="font-medium">{lead.name}</p>
-                  <p className="text-sm text-gray-500">{lead.service}</p>
+                {/* Name + service */}
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</p>
+                  <p style={{ fontSize: 12, color: '#aaa', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.service || '—'}</p>
                 </div>
-                <div className="w-56">
-                  <p className="text-xs text-gray-400">Address</p>
-                  <p className="text-sm">{lead.address}</p>
-                </div>
-                <div className="w-32">
-                  <p className="text-xs text-gray-400">Source</p>
-                  <p className="text-sm">{lead.source}</p>
-                </div>
-                <div className="w-32">
-                  <p className="text-xs text-gray-400 mb-1">Status</p>
+
+                {/* Full address — wraps if needed */}
+                <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.4 }}>{lead.address || '—'}</p>
+
+                {/* Source */}
+                <p style={{ fontSize: 13, color: '#555', margin: 0 }}>{lead.source || '—'}</p>
+
+                {/* Status dropdown */}
+                <div onClick={(e) => e.stopPropagation()}>
                   <select
-                    className="w-full bg-gray-100 rounded-lg px-2 py-1 text-sm"
-                    value={lead.status ?? 'new'}
+                    value={lead.status || 'new'}
                     onChange={(e) => updateStatus(lead.id, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      padding: '5px 10px',
+                      borderRadius: 20,
+                      border: 'none',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      background: STATUS_BADGE[lead.status]?.bg || '#f5f5f5',
+                      color: STATUS_BADGE[lead.status]?.text || '#888',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                    }}
                   >
                     <option value="new">New</option>
                     <option value="appointment">Appointment</option>
@@ -271,27 +296,39 @@ export default function LeadsPage() {
                     <option value="pending">Pending</option>
                   </select>
                 </div>
-                <div className="w-40">
-                  <p className="text-xs text-gray-400 mb-1">Result</p>
+
+                {/* Result dropdown */}
+                <div onClick={(e) => e.stopPropagation()}>
                   <select
-                    className="w-full bg-gray-100 rounded-lg px-2 py-1 text-sm"
-                    value={lead.result ?? ''}
+                    value={lead.result || ''}
                     onChange={(e) => updateResult(lead.id, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      padding: '5px 10px',
+                      borderRadius: 20,
+                      border: 'none',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      background: lead.result ? (RESULT_BADGE[lead.result]?.bg || '#f5f5f5') : '#f5f5f5',
+                      color: lead.result ? (RESULT_BADGE[lead.result]?.text || '#888') : '#bbb',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                    }}
                   >
                     <option value="">—</option>
                     <option value="sold">Sold</option>
                     <option value="price_high">Price Too High</option>
-                    <option value="competitor">Went With Competitor</option>
+                    <option value="competitor">Competitor</option>
                     <option value="future">Future Date</option>
-                    <option value="finance">Financing Turned Down</option>
+                    <option value="finance">Financing</option>
                   </select>
                 </div>
 
-                {/* Delete lead button */}
+                {/* Delete */}
                 <button
                   onClick={(e) => deleteLead(lead.id, e)}
-                  className="text-xs text-red-400 hover:text-red-600 px-2 py-1 whitespace-nowrap"
+                  style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
                 >
                   Delete
                 </button>
@@ -299,9 +336,76 @@ export default function LeadsPage() {
             ))}
           </div>
         </div>
+      </div>
 
-      </main>
+      {/* ── ADD LEAD MODAL ────────────────────────────────────────────── */}
+      {showAddLead && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setShowAddLead(false)}
+        >
+          <div
+            style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 440, margin: '0 16px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <p style={{ fontSize: 16, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>New Lead</p>
+                <button onClick={() => setShowAddLead(false)} style={{ color: '#ccc', background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+              </div>
+            </div>
 
+            <form onSubmit={addLead} style={{ padding: '0 24px 24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                {[
+                  { placeholder: 'Name *', value: name, setter: setName, type: 'text' },
+                  { placeholder: 'Email', value: email, setter: setEmail, type: 'email' },
+                  { placeholder: 'Phone', value: phone, setter: setPhone, type: 'tel' },
+                  { placeholder: 'Address', value: address, setter: setAddress, type: 'text' },
+                ].map(({ placeholder, value, setter, type }) => (
+                  <input
+                    key={placeholder}
+                    type={type}
+                    placeholder={placeholder}
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
+                    style={{ padding: '10px 12px', borderRadius: 12, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }}
+                  />
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                <select
+                  value={service}
+                  onChange={(e) => setService(e.target.value)}
+                  style={{ padding: '10px 12px', borderRadius: 12, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none', color: service ? '#1a1a2e' : '#aaa' }}
+                >
+                  <option value="">— Service —</option>
+                  {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  style={{ padding: '10px 12px', borderRadius: 12, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none', color: source ? '#1a1a2e' : '#aaa' }}
+                >
+                  <option value="">— Source —</option>
+                  {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                style={{ width: '100%', padding: '11px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 14, border: 'none', cursor: 'pointer' }}
+              >
+                Add Lead
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── LEAD DETAIL MODAL ─────────────────────────────────────────── */}
       <LeadModal
         selectedLead={selectedLead}
         setSelectedLead={setSelectedLead}
@@ -310,8 +414,8 @@ export default function LeadsPage() {
         setNoteText={setNoteText}
         addNote={addNote}
         proposals={proposals}
-        onProposalDeleted={() => getProposals(selectedLead.id)}
-        onLeadUpdated={() => getLeads()}
+        onProposalDeleted={() => selectedLead && getProposals(selectedLead.id)}
+        onLeadUpdated={getLeads}
         serviceOptions={serviceOptions}
       />
 

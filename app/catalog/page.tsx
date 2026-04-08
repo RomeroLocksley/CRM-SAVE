@@ -4,6 +4,22 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
+function NavItem({ href, active, label, icon }: { href: string; active?: boolean; label: string; icon: React.ReactNode }) {
+  return (
+    <Link href={href} className="flex flex-col items-center gap-1" style={{ textDecoration: 'none' }}>
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+        style={{ background: active ? 'rgba(255,255,255,0.2)' : 'transparent' }}
+      >
+        {icon}
+      </div>
+      <span style={{ fontSize: '10px', color: active ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: active ? 500 : 400 }}>
+        {label}
+      </span>
+    </Link>
+  )
+}
+
 export default function CatalogPage() {
   const [sections, setSections] = useState<any[]>([])
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
@@ -41,8 +57,7 @@ export default function CatalogPage() {
     if (!editingSectionName.trim()) return
     const { error } = await supabase.from('catalog_sections').update({ name: editingSectionName.trim() }).eq('id', sectionId)
     if (error) { console.error(error); return }
-    setEditingSectionId(null)
-    setEditingSectionName('')
+    setEditingSectionId(null); setEditingSectionName('')
     getSections()
   }
 
@@ -53,10 +68,9 @@ export default function CatalogPage() {
       alert(`This section still has ${data.length} item${data.length > 1 ? 's' : ''} in it. Move or delete all items before deleting this section.`)
       return
     }
-    const confirmed = window.confirm('Are you sure you want to delete this section? This cannot be undone.')
+    const confirmed = window.confirm('Delete this section? This cannot be undone.')
     if (!confirmed) return
-    const { error: delError } = await supabase.from('catalog_sections').delete().eq('id', sectionId)
-    if (delError) { console.error(delError); return }
+    await supabase.from('catalog_sections').delete().eq('id', sectionId)
     if (selectedSectionId === sectionId) { setSelectedSectionId(null); setItems([]) }
     getSections()
   }
@@ -82,7 +96,7 @@ export default function CatalogPage() {
     if (!edits) return
     const { error } = await supabase.from('catalog_items').update({ name: edits.name, description: edits.description, unit: edits.unit }).eq('id', itemId)
     if (error) { console.error(error); return }
-    setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, name: edits.name, description: edits.description, unit: edits.unit } : i))
+    setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, ...edits } : i))
     setItemEdits((prev) => { const next = { ...prev }; delete next[itemId]; return next })
   }
 
@@ -96,17 +110,11 @@ export default function CatalogPage() {
   async function deleteItem(itemId: string) {
     const confirmed = window.confirm('Delete this item and all its cost rows? This cannot be undone.')
     if (!confirmed) return
-    const { data: costRowData, error: fetchErr } = await supabase.from('catalog_cost_rows').select('id').eq('item_id', itemId)
-    if (fetchErr) { console.error(fetchErr); return }
+    const { data: costRowData } = await supabase.from('catalog_cost_rows').select('id').eq('item_id', itemId)
     const costRowIds = (costRowData || []).map((r: any) => r.id)
-    if (costRowIds.length > 0) {
-      const { error: tirErr } = await supabase.from('template_item_rows').delete().in('catalog_cost_row_id', costRowIds)
-      if (tirErr) { console.error(tirErr); return }
-    }
-    const { error: rowsError } = await supabase.from('catalog_cost_rows').delete().eq('item_id', itemId)
-    if (rowsError) { console.error(rowsError); return }
-    const { error: itemError } = await supabase.from('catalog_items').delete().eq('id', itemId)
-    if (itemError) { console.error(itemError); return }
+    if (costRowIds.length > 0) await supabase.from('template_item_rows').delete().in('catalog_cost_row_id', costRowIds)
+    await supabase.from('catalog_cost_rows').delete().eq('item_id', itemId)
+    await supabase.from('catalog_items').delete().eq('id', itemId)
     if (expandedItemId === itemId) setExpandedItemId(null)
     setCostRows((prev) => { const next = { ...prev }; delete next[itemId]; return next })
     setItemEdits((prev) => { const next = { ...prev }; delete next[itemId]; return next })
@@ -115,8 +123,7 @@ export default function CatalogPage() {
 
   async function moveItem(itemId: string, newSectionId: string) {
     if (!newSectionId || newSectionId === selectedSectionId) return
-    const { error } = await supabase.from('catalog_items').update({ section_id: newSectionId }).eq('id', itemId)
-    if (error) { console.error(error); return }
+    await supabase.from('catalog_items').update({ section_id: newSectionId }).eq('id', itemId)
     setItems((prev) => prev.filter((i) => i.id !== itemId))
     if (expandedItemId === itemId) setExpandedItemId(null)
   }
@@ -131,8 +138,7 @@ export default function CatalogPage() {
 
   async function addCostRow(itemId: string) {
     if (!newRowName.trim() || !newRowUnitCost) return
-    const { error } = await supabase.from('catalog_cost_rows').insert([{ item_id: itemId, name: newRowName.trim(), unit: newRowUnit.trim(), unit_cost: Number(newRowUnitCost) }])
-    if (error) { console.error(error); return }
+    await supabase.from('catalog_cost_rows').insert([{ item_id: itemId, name: newRowName.trim(), unit: newRowUnit.trim(), unit_cost: Number(newRowUnitCost) }])
     setNewRowName(''); setNewRowUnit(''); setNewRowUnitCost('')
     getCostRows(itemId)
   }
@@ -140,8 +146,7 @@ export default function CatalogPage() {
   async function saveCostRowEdits(rowId: string, itemId: string) {
     const edits = rowEdits[rowId]
     if (!edits) return
-    const { error } = await supabase.from('catalog_cost_rows').update({ name: edits.name, unit: edits.unit, unit_cost: Number(edits.unit_cost) || 0 }).eq('id', rowId)
-    if (error) { console.error(error); return }
+    await supabase.from('catalog_cost_rows').update({ name: edits.name, unit: edits.unit, unit_cost: Number(edits.unit_cost) || 0 }).eq('id', rowId)
     setRowEdits((prev) => { const next = { ...prev }; delete next[rowId]; return next })
     getCostRows(itemId)
   }
@@ -156,10 +161,8 @@ export default function CatalogPage() {
   async function deleteCostRow(rowId: string, itemId: string) {
     const confirmed = window.confirm('Delete this cost row? This cannot be undone.')
     if (!confirmed) return
-    const { error: tirErr } = await supabase.from('template_item_rows').delete().eq('catalog_cost_row_id', rowId)
-    if (tirErr) { console.error(tirErr); return }
-    const { error } = await supabase.from('catalog_cost_rows').delete().eq('id', rowId)
-    if (error) { console.error(error); return }
+    await supabase.from('template_item_rows').delete().eq('catalog_cost_row_id', rowId)
+    await supabase.from('catalog_cost_rows').delete().eq('id', rowId)
     setRowEdits((prev) => { const next = { ...prev }; delete next[rowId]; return next })
     getCostRows(itemId)
   }
@@ -177,62 +180,117 @@ export default function CatalogPage() {
 
   useEffect(() => { getSections() }, [])
 
-  // ─── Render ────────────────────────────────────────────────────────────────
-
   return (
-    <div className="flex h-screen bg-[#f4f7fb]">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#f4f7fb' }}>
 
-      {/* MAIN SIDEBAR */}
-      <aside className="w-60 bg-white border-r border-gray-100 p-6 shadow-sm flex-shrink-0">
-        <h2 className="text-xl font-semibold mb-8">CRM</h2>
-        <nav className="flex flex-col gap-3 text-sm">
-          <Link href="/" className="text-gray-500 hover:text-blue-700">Dashboard</Link>
-          <Link href="/leads" className="text-gray-500 hover:text-blue-700">Leads</Link>
-          <Link href="/projects" className="text-gray-500 hover:text-blue-700">Projects</Link>
-          <Link href="/catalog" className="text-blue-700 font-medium">Catalog</Link>
-          <Link href="/templates" className="text-gray-500 hover:text-blue-700">Templates</Link>
-        </nav>
+      {/* ── SLIM SIDEBAR ─────────────────────────────────────────────── */}
+      <aside className="flex flex-col items-center py-5 gap-5 flex-shrink-0" style={{ width: '68px', background: '#0C447C' }}>
+        <div className="mb-2" style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="2" width="5" height="5" rx="1" fill="white"/>
+            <rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.6"/>
+            <rect x="2" y="9" width="5" height="5" rx="1" fill="white" opacity="0.6"/>
+            <rect x="9" y="9" width="5" height="5" rx="1" fill="white" opacity="0.4"/>
+          </svg>
+        </div>
+        <NavItem href="/" label="Home" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 7.5L9 2l7 5.5V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinejoin="round"/>
+            <rect x="6.5" y="10" width="5" height="7" rx="0.5" fill="rgba(255,255,255,0.6)"/>
+          </svg>
+        }/>
+        <NavItem href="/leads" label="Leads" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="6" r="3.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <path d="M2 16c0-3.866 3.134-6 7-6s7 2.134 7 6" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        }/>
+        <NavItem href="/projects" label="Projects" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="1" y="5" width="16" height="11" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <path d="M6 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <path d="M1 9h16" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          </svg>
+        }/>
+        <NavItem href="/catalog" active label="Catalog" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M3 4h12M3 9h12M3 14h7" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        }/>
+        <NavItem href="/templates" label="Templates" icon={
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="1" y="1" width="16" height="5" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <rect x="1" y="9" width="7" height="8" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+            <rect x="10" y="9" width="7" height="8" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          </svg>
+        }/>
       </aside>
 
-      {/* CATALOG SECTIONS SIDEBAR */}
-      <div className="w-64 bg-white border-r p-6 flex flex-col flex-shrink-0">
-        <h2 className="text-lg font-semibold mb-4">Sections</h2>
+      {/* ── SECTIONS SIDEBAR ─────────────────────────────────────────── */}
+      <div className="flex flex-col flex-shrink-0 overflow-hidden" style={{ width: 220, background: 'white', borderRight: '0.5px solid #eee' }}>
 
-        <div className="mb-4">
+        <div style={{ padding: '20px 16px 12px', borderBottom: '0.5px solid #f0f0f0' }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 12px' }}>Sections</p>
           <input
-            className="w-full p-2 border rounded mb-2 text-sm"
             placeholder="New section name"
             value={newSectionName}
             onChange={(e) => setNewSectionName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addSection()}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none', marginBottom: 8 }}
           />
-          <button onClick={addSection} className="w-full bg-blue-600 text-white py-2 rounded text-sm">+ Add Section</button>
+          <button
+            onClick={addSection}
+            style={{ width: '100%', padding: '8px', borderRadius: 8, background: '#185FA5', color: 'white', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}
+          >
+            + Add Section
+          </button>
         </div>
 
-        <div className="space-y-1 overflow-y-auto">
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
           {sections.map((section) => (
             <div key={section.id}>
               {editingSectionId === section.id ? (
-                <div className="flex gap-1 items-center px-1">
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '4px 6px' }}>
                   <input
-                    className="flex-1 p-1 border rounded text-sm"
+                    autoFocus
                     value={editingSectionName}
                     onChange={(e) => setEditingSectionName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') saveEditSection(section.id); if (e.key === 'Escape') setEditingSectionId(null) }}
-                    autoFocus
+                    style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: '0.5px solid #e5e5e5', fontSize: 13, outline: 'none' }}
                   />
-                  <button onClick={() => saveEditSection(section.id)} className="text-xs text-green-600 font-medium px-1">Save</button>
-                  <button onClick={() => setEditingSectionId(null)} className="text-xs text-gray-400 px-1">✕</button>
+                  <button onClick={() => saveEditSection(section.id)} style={{ fontSize: 12, color: '#639922', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Save</button>
+                  <button onClick={() => setEditingSectionId(null)} style={{ fontSize: 12, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                 </div>
               ) : (
                 <div
-                  className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-sm ${selectedSectionId === section.id ? 'bg-blue-100 text-blue-700 font-medium' : 'hover:bg-gray-100 text-gray-700'}`}
+                  className="group"
                   onClick={() => { setSelectedSectionId(section.id); setExpandedItemId(null); getItems(section.id) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 10px', borderRadius: 8, cursor: 'pointer', marginBottom: 2,
+                    background: selectedSectionId === section.id ? '#E6F1FB' : 'transparent',
+                  }}
+                  onMouseOver={(e) => { if (selectedSectionId !== section.id) e.currentTarget.style.background = '#f5f5f5' }}
+                  onMouseOut={(e) => { if (selectedSectionId !== section.id) e.currentTarget.style.background = 'transparent' }}
                 >
-                  <span className="truncate flex-1">{section.name}</span>
-                  <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); setEditingSectionId(section.id); setEditingSectionName(section.name) }} className="text-xs text-gray-400 hover:text-blue-600 px-1" title="Rename">✎</button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteSection(section.id) }} className="text-xs text-gray-400 hover:text-red-500 px-1" title="Delete">✕</button>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: selectedSectionId === section.id ? '#0C447C' : '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {section.name}
+                  </span>
+                  <div style={{ display: 'flex', gap: 2, marginLeft: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => { setEditingSectionId(section.id); setEditingSectionName(section.name) }}
+                      style={{ fontSize: 12, color: '#ddd', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 3px' }}
+                      onMouseOver={(e) => (e.currentTarget.style.color = '#185FA5')}
+                      onMouseOut={(e) => (e.currentTarget.style.color = '#ddd')}
+                      title="Rename"
+                    >✎</button>
+                    <button
+                      onClick={() => deleteSection(section.id)}
+                      style={{ fontSize: 12, color: '#ddd', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 3px' }}
+                      onMouseOver={(e) => (e.currentTarget.style.color = '#f09595')}
+                      onMouseOut={(e) => (e.currentTarget.style.color = '#ddd')}
+                      title="Delete"
+                    >✕</button>
                   </div>
                 </div>
               )}
@@ -241,137 +299,228 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 p-10 overflow-y-auto">
-        <h1 className="text-2xl font-semibold mb-6">Catalog</h1>
+      {/* ── MAIN CONTENT ─────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-        {!selectedSectionId ? (
-          <p className="text-gray-500">Select a section to view items</p>
-        ) : (
-          <>
-            <div className="bg-white p-4 rounded-xl border border-gray-200 mb-6 shadow-sm">
-              <h3 className="font-medium mb-3 text-sm text-gray-600">Add Item</h3>
-              <div className="flex gap-3">
-                <input className="flex-1 p-2 border rounded text-sm" placeholder="Item name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
-                <button onClick={addItem} className="bg-green-600 text-white px-4 py-2 rounded text-sm whitespace-nowrap">+ Add Item</button>
-              </div>
+        {/* Top bar */}
+        <div style={{ flexShrink: 0, padding: '16px 24px', background: 'white', borderBottom: '0.5px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>
+            {selectedSectionId ? sections.find((s) => s.id === selectedSectionId)?.name : 'Catalog'}
+          </h1>
+          {selectedSectionId && (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <input
+                placeholder="New item name"
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addItem()}
+                style={{ padding: '8px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none', width: 200 }}
+              />
+              <button
+                onClick={addItem}
+                style={{ padding: '8px 16px', borderRadius: 10, background: '#185FA5', color: 'white', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                + Add Item
+              </button>
             </div>
+          )}
+        </div>
 
-            {items.length === 0 ? (
-              <p className="text-gray-500 text-sm">No items in this section yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {items.map((item) => {
-                  const isExpanded = expandedItemId === item.id
-                  const rows = costRows[item.id] || []
-                  const edits = itemEdits[item.id]
-                  const hasUnsavedEdits = !!edits
+        <div className="flex-1 overflow-y-auto" style={{ padding: 24 }}>
 
-                  return (
-                    <div key={item.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                      <div className="flex items-center justify-between px-5 py-4">
-                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => toggleItem(item)}>
-                          <p className="font-medium text-sm">{item.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5 whitespace-normal break-words">{item.description}</p>
-                        </div>
-                        <div className="flex items-center gap-4 ml-4">
-                          <span className="text-xs text-gray-400">Unit: {item.unit || '—'}</span>
-                          <button onClick={() => deleteItem(item.id)} className="text-xs text-red-400 hover:text-red-600 px-1">Delete</button>
-                          <span className="text-gray-400 text-sm cursor-pointer select-none" onClick={() => toggleItem(item)}>{isExpanded ? '▲' : '▼'}</span>
-                        </div>
+          {!selectedSectionId ? (
+            <p style={{ color: '#aaa', fontSize: 14 }}>Select a section on the left to view and manage items.</p>
+          ) : items.length === 0 ? (
+            <p style={{ color: '#bbb', fontSize: 14 }}>No items in this section yet. Add one above.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {items.map((item) => {
+                const isExpanded = expandedItemId === item.id
+                const rows = costRows[item.id] || []
+                const edits = itemEdits[item.id]
+                const hasUnsavedEdits = !!edits
+
+                return (
+                  <div key={item.id} style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, overflow: 'hidden' }}>
+
+                    {/* Item header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
+                      <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => toggleItem(item)}>
+                        <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: '#1a1a2e' }}>{item.name}</p>
+                        <p style={{ fontSize: 12, color: '#aaa', margin: '2px 0 0', whiteSpace: 'normal', wordBreak: 'break-word' }}>{item.description}</p>
                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 16, flexShrink: 0 }}>
+                        <span style={{ fontSize: 12, color: '#aaa' }}>Unit: {item.unit || '—'}</span>
+                        <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>
+                        <span style={{ color: '#bbb', fontSize: 13, cursor: 'pointer' }} onClick={() => toggleItem(item)}>{isExpanded ? '▲' : '▼'}</span>
+                      </div>
+                    </div>
 
-                      {isExpanded && (
-                        <div className="border-t border-gray-100 px-5 py-4">
+                    {isExpanded && (
+                      <div style={{ borderTop: '0.5px solid #f0f0f0', padding: '16px' }}>
 
-                          <div className="mb-5">
-                            <p className="text-xs font-medium text-gray-400 uppercase mb-2">Item details</p>
-                            <div className="grid grid-cols-3 gap-3 mb-2">
-                              <div>
-                                <label className="text-xs text-gray-400 block mb-1">Name</label>
-                                <input className="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" value={edits?.name ?? item.name ?? ''} onChange={(e) => updateItemEdit(item.id, 'name', e.target.value)} />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-400 block mb-1">Unit</label>
-                                <input className="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="e.g. sqft, ea, hrs" value={edits?.unit ?? item.unit ?? ''} onChange={(e) => updateItemEdit(item.id, 'unit', e.target.value)} />
-                              </div>
-                              <div className="flex items-end">
-                                <button onClick={() => saveItemEdits(item.id)} disabled={!hasUnsavedEdits} className={`w-full px-4 py-2 rounded text-sm font-medium transition-colors ${hasUnsavedEdits ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>Save changes</button>
-                              </div>
+                        {/* Item details */}
+                        <p style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Item details</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Name</label>
+                            <input
+                              value={edits?.name ?? item.name ?? ''}
+                              onChange={(e) => updateItemEdit(item.id, 'name', e.target.value)}
+                              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Unit</label>
+                            <input
+                              placeholder="e.g. sqft"
+                              value={edits?.unit ?? item.unit ?? ''}
+                              onChange={(e) => updateItemEdit(item.id, 'unit', e.target.value)}
+                              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                            <button
+                              onClick={() => saveItemEdits(item.id)}
+                              disabled={!hasUnsavedEdits}
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: 8, background: hasUnsavedEdits ? '#185FA5' : '#f0f0f0', color: hasUnsavedEdits ? 'white' : '#bbb', fontSize: 13, fontWeight: 500, border: 'none', cursor: hasUnsavedEdits ? 'pointer' : 'not-allowed' }}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Description (customer-facing)</label>
+                          <textarea
+                            rows={3}
+                            placeholder="This description will appear on the customer proposal..."
+                            value={edits?.description ?? item.description ?? ''}
+                            onChange={(e) => updateItemEdit(item.id, 'description', e.target.value)}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none', resize: 'none', lineHeight: 1.5 }}
+                          />
+                        </div>
+
+                        {/* Move to section */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 16, borderBottom: '0.5px dashed #f0f0f0' }}>
+                          <span style={{ fontSize: 12, color: '#aaa', whiteSpace: 'nowrap' }}>Move to section:</span>
+                          <select
+                            defaultValue=""
+                            onChange={(e) => { if (e.target.value) moveItem(item.id, e.target.value) }}
+                            style={{ padding: '7px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
+                          >
+                            <option value="" disabled>— Select section —</option>
+                            {sections.filter((s) => s.id !== selectedSectionId).map((s) => (
+                              <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Cost rows */}
+                        {rows.length > 0 && (
+                          <>
+                            <p style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>Cost rows</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 60px', gap: 8, marginBottom: 6, padding: '0 2px' }}>
+                              {['Name', 'Unit', 'Unit cost', '', ''].map((h, i) => (
+                                <span key={i} style={{ fontSize: 11, color: '#bbb' }}>{h}</span>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                              {rows.map((row) => {
+                                const rEdits = rowEdits[row.id]
+                                const hasRowEdits = !!rEdits
+                                return (
+                                  <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 60px', gap: 8, alignItems: 'center', background: '#fafafa', borderRadius: 8, padding: '8px 10px' }}>
+                                    <input
+                                      value={rEdits?.name ?? row.name ?? ''}
+                                      onChange={(e) => updateRowEdit(row.id, 'name', e.target.value, row)}
+                                      style={{ padding: '6px 8px', borderRadius: 6, border: '0.5px solid #e5e5e5', background: 'white', fontSize: 13, outline: 'none' }}
+                                    />
+                                    <input
+                                      placeholder="unit"
+                                      value={rEdits?.unit ?? row.unit ?? ''}
+                                      onChange={(e) => updateRowEdit(row.id, 'unit', e.target.value, row)}
+                                      style={{ padding: '6px 8px', borderRadius: 6, border: '0.5px solid #e5e5e5', background: 'white', fontSize: 13, outline: 'none' }}
+                                    />
+                                    <input
+                                      type="number"
+                                      value={rEdits?.unit_cost ?? String(row.unit_cost ?? '0')}
+                                      onChange={(e) => updateRowEdit(row.id, 'unit_cost', e.target.value, row)}
+                                      style={{ padding: '6px 8px', borderRadius: 6, border: '0.5px solid #e5e5e5', background: 'white', fontSize: 13, outline: 'none' }}
+                                    />
+                                    <button
+                                      onClick={() => saveCostRowEdits(row.id, item.id)}
+                                      disabled={!hasRowEdits}
+                                      style={{ padding: '6px 8px', borderRadius: 6, background: hasRowEdits ? '#185FA5' : '#f0f0f0', color: hasRowEdits ? 'white' : '#bbb', fontSize: 12, fontWeight: 500, border: 'none', cursor: hasRowEdits ? 'pointer' : 'not-allowed' }}
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={() => deleteCostRow(row.id, item.id)}
+                                      style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'right' }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </>
+                        )}
+
+                        {rows.length === 0 && (
+                          <p style={{ fontSize: 12, color: '#bbb', marginBottom: 16 }}>No cost rows yet. Add one below.</p>
+                        )}
+
+                        {/* Add cost row */}
+                        <div style={{ paddingTop: 16, borderTop: '0.5px dashed #f0f0f0' }}>
+                          <p style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Add cost row</p>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 100px', gap: 10, alignItems: 'flex-end' }}>
+                            <div>
+                              <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Name</label>
+                              <input
+                                placeholder="e.g. Labor"
+                                value={newRowName}
+                                onChange={(e) => setNewRowName(e.target.value)}
+                                style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
+                              />
                             </div>
                             <div>
-                              <label className="text-xs text-gray-400 block mb-1">Description (customer-facing)</label>
-                              <textarea className="w-full p-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" rows={4} placeholder="This description will appear on the customer proposal..." value={edits?.description ?? item.description ?? ''} onChange={(e) => updateItemEdit(item.id, 'description', e.target.value)} />
+                              <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Unit</label>
+                              <input
+                                placeholder="e.g. hrs"
+                                value={newRowUnit}
+                                onChange={(e) => setNewRowUnit(e.target.value)}
+                                style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
+                              />
                             </div>
-                          </div>
-
-                          <div className="border-t border-dashed border-gray-200 mb-4" />
-
-                          <div className="mb-4 flex items-center gap-3">
-                            <p className="text-xs text-gray-400 whitespace-nowrap">Move to section:</p>
-                            <select className="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" defaultValue="" onChange={(e) => { if (e.target.value) moveItem(item.id, e.target.value) }}>
-                              <option value="" disabled>— Select section —</option>
-                              {sections.filter((s) => s.id !== selectedSectionId).map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
-                            </select>
-                          </div>
-
-                          <div className="border-t border-dashed border-gray-200 mb-4" />
-
-                          {rows.length > 0 && (
-                            <div className="grid grid-cols-5 gap-3 mb-2 px-1">
-                              <p className="text-xs text-gray-400">Name</p>
-                              <p className="text-xs text-gray-400">Unit</p>
-                              <p className="text-xs text-gray-400">Unit cost</p>
-                              <p className="text-xs text-gray-400"></p>
-                              <p className="text-xs text-gray-400"></p>
+                            <div>
+                              <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Unit cost ($)</label>
+                              <input
+                                type="number"
+                                placeholder="0.00"
+                                value={newRowUnitCost}
+                                onChange={(e) => setNewRowUnitCost(e.target.value)}
+                                style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
+                              />
                             </div>
-                          )}
-
-                          <div className="space-y-2 mb-4">
-                            {rows.length === 0 && <p className="text-xs text-gray-400 mb-3">No cost rows yet. Add one below.</p>}
-                            {rows.map((row) => {
-                              const rEdits = rowEdits[row.id]
-                              const hasRowEdits = !!rEdits
-                              return (
-                                <div key={row.id} className="grid grid-cols-5 gap-3 items-center bg-gray-50 rounded-lg px-3 py-2">
-                                  <input className="w-full p-1.5 border rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" value={rEdits?.name ?? row.name ?? ''} onChange={(e) => updateRowEdit(row.id, 'name', e.target.value, row)} />
-                                  <input className="w-full p-1.5 border rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" value={rEdits?.unit ?? row.unit ?? ''} placeholder="unit" onChange={(e) => updateRowEdit(row.id, 'unit', e.target.value, row)} />
-                                  <input type="number" className="w-full p-1.5 border rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" value={rEdits?.unit_cost ?? String(row.unit_cost ?? '0')} onChange={(e) => updateRowEdit(row.id, 'unit_cost', e.target.value, row)} />
-                                  <button onClick={() => saveCostRowEdits(row.id, item.id)} disabled={!hasRowEdits} className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${hasRowEdits ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>Save</button>
-                                  <button onClick={() => deleteCostRow(row.id, item.id)} className="text-xs text-red-400 hover:text-red-600 text-right">Delete</button>
-                                </div>
-                              )
-                            })}
+                            <button
+                              onClick={() => addCostRow(item.id)}
+                              style={{ padding: '8px 14px', borderRadius: 8, background: '#185FA5', color: 'white', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}
+                            >
+                              + Add Row
+                            </button>
                           </div>
-
-                          <div className="border-t border-dashed border-gray-200 pt-4">
-                            <p className="text-xs font-medium text-gray-400 uppercase mb-2">Add cost row</p>
-                            <div className="grid grid-cols-4 gap-3 items-end">
-                              <div>
-                                <label className="text-xs text-gray-400 block mb-1">Name</label>
-                                <input className="w-full p-2 border rounded text-sm" placeholder="e.g. Labor" value={newRowName} onChange={(e) => setNewRowName(e.target.value)} />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-400 block mb-1">Unit</label>
-                                <input className="w-full p-2 border rounded text-sm" placeholder="e.g. hrs" value={newRowUnit} onChange={(e) => setNewRowUnit(e.target.value)} />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-400 block mb-1">Unit cost ($)</label>
-                                <input type="number" className="w-full p-2 border rounded text-sm" placeholder="0.00" value={newRowUnitCost} onChange={(e) => setNewRowUnitCost(e.target.value)} />
-                              </div>
-                              <button onClick={() => addCostRow(item.id)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm h-[38px]">+ Add Row</button>
-                            </div>
-                          </div>
-
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </>
-        )}
+
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
