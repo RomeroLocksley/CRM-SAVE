@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
+import NavSidebar from '../../components/NavSidebar'
 
 type CostRow = {
   id: string; item_id: string; proposal_id: string
@@ -26,14 +26,6 @@ function formatQtyUnit(qty: any, unit: string): string {
   if (!qty && !unit) return ''; if (!qty) return unit
   const n = Number(qty); const qtyStr = Number.isInteger(n) ? String(n) : String(qty)
   return unit ? `${qtyStr} ${unit}` : qtyStr
-}
-function NavItem({ href, active, label, icon }: { href: string; active?: boolean; label: string; icon: React.ReactNode }) {
-  return (
-    <Link href={href} className="flex flex-col items-center gap-1" style={{ textDecoration: 'none' }}>
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ background: active ? 'rgba(255,255,255,0.2)' : 'transparent' }}>{icon}</div>
-      <span style={{ fontSize: '10px', color: active ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: active ? 500 : 400 }}>{label}</span>
-    </Link>
-  )
 }
 
 // ─── Preview ──────────────────────────────────────────────────────────────────
@@ -59,7 +51,8 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string; pr
     load()
   }, [proposalId])
 
-  const grandTotal = sections.reduce((t, s) => t + s.items.reduce((t2, i) => t2 + i.rows.reduce((t3, r) => t3 + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0), 0)
+  const MARKUP = 1.5 * 1.05
+  const grandTotal = sections.reduce((t, s) => t + s.items.reduce((t2, i) => t2 + i.rows.reduce((t3, r) => t3 + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0), 0) * MARKUP
   const printDate = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
   if (loading) return <div className="p-10 text-gray-400">Loading preview…</div>
 
@@ -95,7 +88,7 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string; pr
         </div>
         <hr className="border-gray-200 mb-6" />
         {sections.map((section) => {
-          const sectionTotal = section.items.reduce((sum, item) => sum + item.rows.reduce((s, r) => s + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0)
+          const sectionTotal = section.items.reduce((sum, item) => sum + item.rows.reduce((s, r) => s + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0) * MARKUP
           return (
             <div key={section.id} className="mb-8">
               <h2 className="text-sm font-bold text-[#1a3a5c] uppercase mb-2">{section.name}</h2>
@@ -162,19 +155,14 @@ function ProposalBuilder() {
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
 
-  // Catalog data for pickers
   const [catalogSections, setCatalogSections] = useState<any[]>([])
   const [catalogItems, setCatalogItems] = useState<any[]>([])
-
-  // Add section picker state
   const [showAddSectionPicker, setShowAddSectionPicker] = useState(false)
-
-  // Add item picker state: sectionId → open
   const [addItemPickerSectionId, setAddItemPickerSectionId] = useState<string | null>(null)
   const [addItemCatalogSectionFilter, setAddItemCatalogSectionFilter] = useState('')
   const [addItemSearch, setAddItemSearch] = useState('')
 
-  // ─── Load ──────────────────────────────────────────────────────────────────
+  // ─── Load ────────────────────────────────────────────────────────────────
 
   async function loadProposal() {
     if (!proposalId) return
@@ -201,7 +189,7 @@ function ProposalBuilder() {
 
   useEffect(() => { loadProposal(); loadTemplates(); loadCatalog() }, [proposalId])
 
-  // ─── Add Section from catalog ─────────────────────────────────────────────
+  // ─── Add / Delete sections & items ───────────────────────────────────────
 
   async function addSectionFromCatalog(catalogSection: any) {
     if (!proposalId) return
@@ -211,8 +199,6 @@ function ProposalBuilder() {
     setShowAddSectionPicker(false)
     markDirty()
   }
-
-  // ─── Delete section ───────────────────────────────────────────────────────
 
   async function deleteSection(sectionId: string) {
     const confirmed = window.confirm('Delete this section and all its items? This cannot be undone.')
@@ -228,53 +214,25 @@ function ProposalBuilder() {
     markDirty()
   }
 
-  // ─── Add item from catalog ────────────────────────────────────────────────
-
   async function addItemFromCatalog(sectionId: string, catalogItem: any) {
     if (!proposalId) return
-    // Fetch cost rows for this catalog item
     const { data: costRows } = await supabase.from('catalog_cost_rows').select('*').eq('item_id', catalogItem.id).order('created_at', { ascending: true })
     const newItemId = crypto.randomUUID()
-    await supabase.from('proposal_items').insert([{
-      id: newItemId, proposal_id: proposalId, section_id: sectionId,
-      name: catalogItem.name || '', description: catalogItem.description || '',
-      display_quantity: null, display_unit: catalogItem.unit || '',
-    }])
-    const newRows: any[] = (costRows || []).map((cr: any) => ({
-      id: crypto.randomUUID(), proposal_id: proposalId, item_id: newItemId,
-      name: cr.name, quantity: 0, unit: cr.unit, unit_cost: cr.unit_cost,
-    }))
+    await supabase.from('proposal_items').insert([{ id: newItemId, proposal_id: proposalId, section_id: sectionId, name: catalogItem.name || '', description: catalogItem.description || '', display_quantity: null, display_unit: catalogItem.unit || '' }])
+    const newRows: any[] = (costRows || []).map((cr: any) => ({ id: crypto.randomUUID(), proposal_id: proposalId, item_id: newItemId, name: cr.name, quantity: 0, unit: cr.unit, unit_cost: cr.unit_cost }))
     if (newRows.length > 0) await supabase.from('proposal_item_rows').insert(newRows)
-    setSections((prev) => prev.map((s) => s.id !== sectionId ? s : {
-      ...s, items: [...s.items, {
-        id: newItemId, section_id: sectionId, proposal_id: proposalId!,
-        name: catalogItem.name || '', description: catalogItem.description || '',
-        display_quantity: '', display_unit: catalogItem.unit || '',
-        rows: newRows,
-      }]
-    }))
-    setAddItemPickerSectionId(null)
-    setAddItemCatalogSectionFilter('')
-    setAddItemSearch('')
+    setSections((prev) => prev.map((s) => s.id !== sectionId ? s : { ...s, items: [...s.items, { id: newItemId, section_id: sectionId, proposal_id: proposalId!, name: catalogItem.name || '', description: catalogItem.description || '', display_quantity: null, display_unit: catalogItem.unit || '', rows: newRows }] }))
+    setAddItemPickerSectionId(null); setAddItemCatalogSectionFilter(''); setAddItemSearch('')
     markDirty()
   }
-
-  // ─── Add custom item ──────────────────────────────────────────────────────
 
   async function addCustomItem(sectionId: string) {
     if (!proposalId) return
-    const newItem = {
-      id: crypto.randomUUID(), proposal_id: proposalId, section_id: sectionId,
-      name: '', description: '', display_quantity: null, display_unit: '',
-    }
+    const newItem = { id: crypto.randomUUID(), proposal_id: proposalId, section_id: sectionId, name: '', description: '', display_quantity: null, display_unit: '' }
     await supabase.from('proposal_items').insert([newItem])
-    setSections((prev) => prev.map((s) => s.id !== sectionId ? s : {
-      ...s, items: [...s.items, { ...newItem, rows: [] }]
-    }))
+    setSections((prev) => prev.map((s) => s.id !== sectionId ? s : { ...s, items: [...s.items, { ...newItem, rows: [] }] }))
     markDirty()
   }
-
-  // ─── Delete item ──────────────────────────────────────────────────────────
 
   async function deleteItem(sectionIndex: number, itemId: string) {
     const confirmed = window.confirm('Delete this item? This cannot be undone.')
@@ -284,8 +242,6 @@ function ProposalBuilder() {
     setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : { ...s, items: s.items.filter((i) => i.id !== itemId) }))
     markDirty()
   }
-
-  // ─── Update helpers ───────────────────────────────────────────────────────
 
   function updateSectionName(sectionIndex: number, value: string) {
     setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : { ...s, name: value }))
@@ -334,8 +290,7 @@ function ProposalBuilder() {
       if (tsErr) throw tsErr
       if (!tSections || tSections.length === 0) throw new Error('No sections found in this template.')
       const tSectionIds = tSections.map((s: any) => s.id)
-      const { data: tItems, error: tiErr } = await supabase.from('template_items').select('*').in('section_id', tSectionIds).order('sort_order', { ascending: true })
-      if (tiErr) throw tiErr
+      const { data: tItems } = await supabase.from('template_items').select('*').in('section_id', tSectionIds).order('sort_order', { ascending: true })
       const catalogItemIds = (tItems || []).map((i: any) => i.catalog_item_id).filter(Boolean)
       const { data: catItems } = catalogItemIds.length > 0 ? await supabase.from('catalog_items').select('*').in('id', catalogItemIds) : { data: [] }
       const tItemIds = (tItems || []).map((i: any) => i.id)
@@ -399,40 +354,30 @@ function ProposalBuilder() {
   }
 
   const proposalTotal = sections.reduce((sT, s) => sT + s.items.reduce((iT, i) => iT + i.rows.reduce((rT, r) => rT + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0), 0)
+
   const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
     draft: { bg: '#f5f5f5', text: '#888' }, sent: { bg: '#FAEEDA', text: '#633806' },
     viewed: { bg: '#E6F1FB', text: '#0C447C' }, signed: { bg: '#EAF3DE', text: '#27500A' },
   }
   const badge = STATUS_BADGE[proposalStatus] || STATUS_BADGE.draft
 
-  // Filtered catalog items for the add item picker
   const filteredCatalogItems = catalogItems.filter((ci) => {
     const matchesSection = !addItemCatalogSectionFilter || ci.section_id === addItemCatalogSectionFilter
     const matchesSearch = !addItemSearch || ci.name.toLowerCase().includes(addItemSearch.toLowerCase())
     return matchesSection && matchesSearch
   })
 
-  if (!proposalId) return <p className="p-10 text-gray-400">No proposal ID provided.</p>
-
-  // Button style helpers
   const btnPrimary = { padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500 as const, border: 'none', cursor: 'pointer', background: '#185FA5', color: 'white' }
   const btnDanger = { padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500 as const, border: '0.5px solid #f5c5c5', cursor: 'pointer', background: '#fff5f5', color: '#c0392b' }
   const btnOutline = { padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500 as const, border: '0.5px solid #e0e0e0', cursor: 'pointer', background: 'white', color: '#555' }
+  const inputStyle = { padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' } as React.CSSProperties
+
+  if (!proposalId) return <p className="p-10 text-gray-400">No proposal ID provided.</p>
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#f4f7fb' }}>
 
-      {/* SLIM SIDEBAR */}
-      <aside className="flex flex-col items-center py-5 gap-5 flex-shrink-0 print:hidden" style={{ width: '68px', background: '#0C447C' }}>
-        <div className="mb-2" style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" fill="white"/><rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.6"/><rect x="2" y="9" width="5" height="5" rx="1" fill="white" opacity="0.6"/><rect x="9" y="9" width="5" height="5" rx="1" fill="white" opacity="0.4"/></svg>
-        </div>
-        <NavItem href="/" label="Home" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 7.5L9 2l7 5.5V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinejoin="round"/><rect x="6.5" y="10" width="5" height="7" rx="0.5" fill="rgba(255,255,255,0.6)"/></svg>}/>
-        <NavItem href="/leads" label="Leads" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/><path d="M2 16c0-3.866 3.134-6 7-6s7 2.134 7 6" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"/></svg>}/>
-        <NavItem href="/projects" label="Projects" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="5" width="16" height="11" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/><path d="M6 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/><path d="M1 9h16" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/></svg>}/>
-        <NavItem href="/catalog" label="Catalog" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 4h12M3 9h12M3 14h7" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"/></svg>}/>
-        <NavItem href="/templates" label="Templates" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="16" height="5" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/><rect x="1" y="9" width="7" height="8" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/><rect x="10" y="9" width="7" height="8" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/></svg>}/>
-      </aside>
+      <NavSidebar />
 
       {/* MAIN */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -440,7 +385,8 @@ function ProposalBuilder() {
         {/* TOP BAR */}
         <div className="flex-shrink-0 print:hidden" style={{ background: 'white', borderBottom: '0.5px solid #eee', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <input className="text-xl font-semibold bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-1 py-0.5 transition-colors w-64" value={proposalTitle} onChange={(e) => { setProposalTitle(e.target.value); markDirty() }} placeholder="Proposal name"/>
+            <input className="text-xl font-semibold bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-1 py-0.5 transition-colors w-64"
+              value={proposalTitle} onChange={(e) => { setProposalTitle(e.target.value); markDirty() }} placeholder="Proposal name" />
             <span style={{ fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 20, background: badge.bg, color: badge.text, textTransform: 'capitalize' }}>{proposalStatus}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -451,7 +397,9 @@ function ProposalBuilder() {
             <span style={{ fontSize: 13, color: saveStatus === 'saved' ? '#639922' : saveStatus === 'unsaved' ? '#BA7517' : saveStatus === 'saving' ? '#aaa' : '#E24B4A' }}>
               {saveStatus === 'saved' && '✓ Saved'}{saveStatus === 'unsaved' && '● Unsaved'}{saveStatus === 'saving' && 'Saving…'}{saveStatus === 'error' && '✕ Failed'}
             </span>
-            <button onClick={saveProposal} disabled={isSaving || !isDirty} style={{ padding: '7px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: isDirty && !isSaving ? 'pointer' : 'not-allowed', background: isDirty && !isSaving ? '#185FA5' : '#f0f0f0', color: isDirty && !isSaving ? 'white' : '#bbb' }}>{isSaving ? 'Saving…' : 'Save'}</button>
+            <button onClick={saveProposal} disabled={isSaving || !isDirty} style={{ padding: '7px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: isDirty && !isSaving ? 'pointer' : 'not-allowed', background: isDirty && !isSaving ? '#185FA5' : '#f0f0f0', color: isDirty && !isSaving ? 'white' : '#bbb' }}>
+              {isSaving ? 'Saving…' : 'Save'}
+            </button>
             {proposalStatus !== 'signed' && (
               <button onClick={sendForSignature} disabled={isSending || sections.length === 0} style={{ padding: '7px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: !isSending && sections.length > 0 ? 'pointer' : 'not-allowed', background: !isSending && sections.length > 0 ? '#534AB7' : '#f0f0f0', color: !isSending && sections.length > 0 ? 'white' : '#bbb' }}>
                 {isSending ? 'Sending…' : proposalStatus === 'sent' || proposalStatus === 'viewed' ? 'Resend for Signature' : 'Send for Signature'}
@@ -475,7 +423,7 @@ function ProposalBuilder() {
             <div style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
               <p style={{ fontSize: 13, fontWeight: 500, color: '#555', margin: '0 0 10px' }}>Load a template</p>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <select value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)} style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
+                <select value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
                   <option value="">— Select a template —</option>
                   {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
@@ -488,23 +436,16 @@ function ProposalBuilder() {
 
             {sections.length === 0 && <p style={{ color: '#bbb', fontSize: 14, marginBottom: 16 }}>No data found. Load a template or add a section below.</p>}
 
-            {/* Sections */}
             {sections.map((section, sIndex) => (
               <div key={section.id} style={{ marginBottom: 32 }}>
-
-                {/* Section header */}
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-                  <input
-                    value={section.name}
-                    onChange={(e) => updateSectionName(sIndex, e.target.value)}
+                  <input value={section.name} onChange={(e) => updateSectionName(sIndex, e.target.value)}
                     style={{ fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'transparent', border: 'none', borderBottom: '1px solid transparent', outline: 'none', flex: 1, padding: '2px 0' }}
                     onFocus={(e) => (e.currentTarget.style.borderBottomColor = '#e5e5e5')}
-                    onBlur={(e) => (e.currentTarget.style.borderBottomColor = 'transparent')}
-                  />
+                    onBlur={(e) => (e.currentTarget.style.borderBottomColor = 'transparent')} />
                   <button onClick={() => deleteSection(section.id)} style={btnDanger}>Delete Section</button>
                 </div>
 
-                {/* Items */}
                 {section.items.map((item, iIndex) => {
                   const itemTotal = item.rows.reduce((sum, row) => sum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0)
                   return (
@@ -522,7 +463,8 @@ function ProposalBuilder() {
                         ] as any[]).map(({ label, value, field, type }) => (
                           <div key={label}>
                             <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>{label}</label>
-                            <input type={type} value={value || ''} onChange={(e) => updateItem(sIndex, iIndex, field, e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }} />
+                            <input type={type} value={value || ''} onChange={(e) => updateItem(sIndex, iIndex, field, e.target.value)}
+                              style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', padding: '7px 10px' }} />
                           </div>
                         ))}
                       </div>
@@ -539,7 +481,8 @@ function ProposalBuilder() {
                                 return (
                                   <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 100px 120px 100px', gap: 8, alignItems: 'center', background: '#fafafa', borderRadius: 8, padding: '8px 10px' }}>
                                     <p style={{ fontSize: 13, color: '#444', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</p>
-                                    <input type="number" value={row.quantity === 0 || row.quantity === '0' ? '' : row.quantity || ''} placeholder="0" onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'quantity', e.target.value)} style={{ padding: '6px 8px', borderRadius: 6, border: '0.5px solid #e5e5e5', background: 'white', fontSize: 13, outline: 'none' }} />
+                                    <input type="number" value={row.quantity === 0 || row.quantity === '0' ? '' : row.quantity || ''} placeholder="0" onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'quantity', e.target.value)}
+                                      style={{ ...inputStyle, padding: '6px 8px' }} />
                                     <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>{row.unit || '—'}</p>
                                     <p style={{ fontSize: 13, color: '#aaa', margin: 0 }}>${Number(row.unit_cost || 0).toFixed(2)}</p>
                                     <p style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', margin: 0, textAlign: 'right' }}>${rowTotal.toFixed(2)}</p>
@@ -557,58 +500,41 @@ function ProposalBuilder() {
                   )
                 })}
 
-                {/* Add Item button + picker inside section */}
+                {/* Add Item picker */}
                 {addItemPickerSectionId === section.id ? (
                   <div style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, padding: '16px 20px', marginTop: 8 }}>
                     <div style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center' }}>
-                      <select
-                        value={addItemCatalogSectionFilter}
-                        onChange={(e) => setAddItemCatalogSectionFilter(e.target.value)}
-                        style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
-                      >
+                      <select value={addItemCatalogSectionFilter} onChange={(e) => setAddItemCatalogSectionFilter(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
                         <option value="">— All catalog sections —</option>
                         {catalogSections.map((cs) => <option key={cs.id} value={cs.id}>{cs.name}</option>)}
                       </select>
-                      <input
-                        placeholder="Search items…"
-                        value={addItemSearch}
-                        onChange={(e) => setAddItemSearch(e.target.value)}
-                        style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}
-                      />
+                      <input placeholder="Search items…" value={addItemSearch} onChange={(e) => setAddItemSearch(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
                       <button onClick={() => { setAddItemPickerSectionId(null); setAddItemCatalogSectionFilter(''); setAddItemSearch('') }} style={btnOutline}>Cancel</button>
                     </div>
                     <div style={{ maxHeight: 220, overflowY: 'auto', border: '0.5px solid #f0f0f0', borderRadius: 10 }}>
-                      {filteredCatalogItems.length === 0 ? (
-                        <p style={{ fontSize: 13, color: '#bbb', padding: '12px 14px', margin: 0 }}>No items found.</p>
-                      ) : filteredCatalogItems.map((ci) => (
-                        <div key={ci.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '0.5px solid #f5f5f5', background: 'white' }}
-                          onMouseOver={(e) => (e.currentTarget.style.background = '#fafafa')}
-                          onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
-                        >
-                          <div>
-                            <p style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', margin: 0 }}>{ci.name}</p>
-                            {ci.description && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>{ci.description.slice(0, 60)}{ci.description.length > 60 ? '…' : ''}</p>}
+                      {filteredCatalogItems.length === 0 ? <p style={{ fontSize: 13, color: '#bbb', padding: '12px 14px', margin: 0 }}>No items found.</p>
+                        : filteredCatalogItems.map((ci) => (
+                          <div key={ci.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '0.5px solid #f5f5f5', background: 'white' }}
+                            onMouseOver={(e) => (e.currentTarget.style.background = '#fafafa')} onMouseOut={(e) => (e.currentTarget.style.background = 'white')}>
+                            <div>
+                              <p style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', margin: 0 }}>{ci.name}</p>
+                              {ci.description && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>{ci.description.slice(0, 60)}{ci.description.length > 60 ? '…' : ''}</p>}
+                            </div>
+                            <button onClick={() => addItemFromCatalog(section.id, ci)} style={btnPrimary}>+ Add</button>
                           </div>
-                          <button onClick={() => addItemFromCatalog(section.id, ci)} style={btnPrimary}>+ Add</button>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => { setAddItemPickerSectionId(section.id); setAddItemCatalogSectionFilter(''); setAddItemSearch('') }}
-                    style={{ ...btnPrimary, marginTop: 8 }}
-                  >
+                  <button onClick={() => { setAddItemPickerSectionId(section.id); setAddItemCatalogSectionFilter(''); setAddItemSearch('') }} style={{ ...btnPrimary, marginTop: 8 }}>
                     + Add Item from Catalog
                   </button>
                 )}
               </div>
             ))}
 
-            {/* Bottom action buttons */}
+            {/* Bottom actions */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
-
-              {/* Add Section picker */}
               {showAddSectionPicker ? (
                 <div style={{ flex: 1, background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, padding: '16px 20px' }}>
                   <p style={{ fontSize: 13, fontWeight: 500, color: '#555', margin: '0 0 10px' }}>Pick a section to add</p>
@@ -617,8 +543,7 @@ function ProposalBuilder() {
                       <button key={cs.id} onClick={() => addSectionFromCatalog(cs)}
                         style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, border: '0.5px solid #e0e0e0', background: 'white', color: '#1a1a2e', cursor: 'pointer' }}
                         onMouseOver={(e) => { e.currentTarget.style.background = '#E6F1FB'; e.currentTarget.style.borderColor = '#185FA5'; e.currentTarget.style.color = '#0C447C' }}
-                        onMouseOut={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.color = '#1a1a2e' }}
-                      >
+                        onMouseOut={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.color = '#1a1a2e' }}>
                         {cs.name}
                       </button>
                     ))}
@@ -630,22 +555,14 @@ function ProposalBuilder() {
                   + Add Section
                 </button>
               )}
-
               {!showAddSectionPicker && (
-                <button
-                  onClick={() => {
-                    const lastSection = sections[sections.length - 1]
-                    if (lastSection) addCustomItem(lastSection.id)
-                    else alert('Add a section first before adding a custom item.')
-                  }}
-                  style={{ padding: '10px 20px', borderRadius: 12, border: '0.5px solid #e0e0e0', background: 'white', color: '#555', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                >
+                <button onClick={() => { const last = sections[sections.length - 1]; if (last) addCustomItem(last.id); else alert('Add a section first.') }}
+                  style={{ padding: '10px 20px', borderRadius: 12, border: '0.5px solid #e0e0e0', background: 'white', color: '#555', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                   + Add Custom Item
                 </button>
               )}
             </div>
 
-            {/* Proposal total */}
             {sections.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <div style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, padding: '16px 28px', textAlign: 'right' }}>
