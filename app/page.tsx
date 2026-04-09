@@ -7,17 +7,17 @@ import NavSidebar from './components/NavSidebar'
 const MARKUP = 1.5 * 1.05
 
 const LOSS_REASON_LABELS: Record<string, string> = {
-  price_high: 'Price Too High',
-  competitor: 'Went With Competitor',
-  future:     'Future Date',
-  finance:    'Financing Turned Down',
+  competitor:       'Went With Competitor',
+  not_interested:   'Not Interested in Pool',
+  future_date:      'Waiting for Future Date',
+  finance_turndown: 'Finance Turndown',
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  new:         { bg: '#f5f5f5',  text: '#888' },
-  appointment: { bg: '#FAEEDA',  text: '#633806' },
-  proposal:    { bg: '#E6F1FB',  text: '#0C447C' },
-  pending:     { bg: '#EDE9FE',  text: '#4C1D95' },
+const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  uncontacted:      { bg: '#f5f5f5',  text: '#888',    label: 'Uncontacted' },
+  appointment_set:  { bg: '#FAEEDA',  text: '#633806', label: 'Appointment Set' },
+  proposal_sent:    { bg: '#E6F1FB',  text: '#0C447C', label: 'Proposal Sent' },
+  needs_reschedule: { bg: '#F3E8FF',  text: '#581C87', label: 'Needs Reschedule' },
 }
 
 export default function Dashboard() {
@@ -27,29 +27,39 @@ export default function Dashboard() {
 
   useEffect(() => {
     supabase.from('leads').select('*').then(({ data }) => setLeads(data || []))
-    supabase.from('proposals').select('id, status, total_price, lead_id').then(({ data }) => setProposals(data || []))
+    supabase.from('proposals').select('id, status, total_price').then(({ data }) => setProposals(data || []))
     supabase.from('projects').select('id, status').then(({ data }) => setProjects(data || []))
   }, [])
 
   const totalLeads = leads.length
   const soldLeads = leads.filter((l) => l.result === 'sold').length
-  const lostLeads = leads.filter((l) => l.result && l.result !== 'sold').length
+  const lostLeads = leads.filter((l) => l.result && l.result !== 'sold' && l.result !== 'working').length
   const closeRate = totalLeads ? ((soldLeads / totalLeads) * 100).toFixed(1) : '0.0'
 
-  // Signed proposals = sold contracts
   const signedProposals = proposals.filter((p) => p.status === 'signed')
   const totalSoldValue = signedProposals.reduce((sum, p) => sum + Number(p.total_price || 0), 0) * MARKUP
   const avgContractPrice = signedProposals.length > 0 ? totalSoldValue / signedProposals.length : 0
   const activeProjects = projects.filter((p) => p.status === 'active').length
 
+  // Loss reasons — exclude working and sold
   const lossReasons: Record<string, number> = {}
-  leads.forEach((l) => { if (l.result && l.result !== 'sold') lossReasons[l.result] = (lossReasons[l.result] || 0) + 1 })
+  leads.forEach((l) => {
+    if (l.result && l.result !== 'sold' && l.result !== 'working') {
+      lossReasons[l.result] = (lossReasons[l.result] || 0) + 1
+    }
+  })
 
   const sources: Record<string, number> = {}
   leads.forEach((l) => { if (l.source) sources[l.source] = (sources[l.source] || 0) + 1 })
 
-  const statusCounts: Record<string, number> = {}
-  leads.forEach((l) => { if (l.status) statusCounts[l.status] = (statusCounts[l.status] || 0) + 1 })
+  // Always show all 4 statuses
+  const statusCounts: Record<string, number> = {
+    uncontacted: 0, appointment_set: 0, proposal_sent: 0, needs_reschedule: 0,
+  }
+  leads.forEach((l) => {
+    const s = l.status || 'uncontacted'
+    if (s in statusCounts) statusCounts[s]++
+  })
 
   function fmtMoney(n: number) {
     return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
@@ -66,7 +76,7 @@ export default function Dashboard() {
 
         <div className="flex-1 overflow-y-auto" style={{ padding: 32 }}>
 
-          {/* Lead KPI cards */}
+          {/* Lead KPIs */}
           <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Leads</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
             {[
@@ -82,7 +92,7 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Revenue / Projects KPI cards */}
+          {/* Business KPIs */}
           <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Business</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
             {[
@@ -101,24 +111,20 @@ export default function Dashboard() {
           {/* Bottom row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
 
-            {/* Pipeline */}
+            {/* Pipeline — all 4 statuses always shown */}
             <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '20px 24px' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 16px' }}>Pipeline</p>
-              {Object.keys(statusCounts).length === 0 ? (
-                <p style={{ fontSize: 13, color: '#bbb' }}>No data yet</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {Object.entries(statusCounts).map(([status, count]) => {
-                    const badge = STATUS_COLORS[status] || { bg: '#f5f5f5', text: '#888' }
-                    return (
-                      <div key={status} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 12, background: badge.bg, color: badge.text, padding: '3px 10px', borderRadius: 20, fontWeight: 500, textTransform: 'capitalize' }}>{status}</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>{count}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 16px' }}>Lead Pipeline</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {Object.entries(statusCounts).map(([status, count]) => {
+                  const s = STATUS_COLORS[status]
+                  return (
+                    <div key={status} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 12, background: s.bg, color: s.text, padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>{s.label}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Why deals are lost */}
@@ -130,7 +136,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {Object.entries(lossReasons).map(([reason, count], i, arr) => (
                     <div key={reason} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
-                      <span style={{ fontSize: 13, color: '#555' }}>{LOSS_REASON_LABELS[reason] || reason.replace('_', ' ')}</span>
+                      <span style={{ fontSize: 13, color: '#555' }}>{LOSS_REASON_LABELS[reason] || reason}</span>
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{count}</span>
                     </div>
                   ))}

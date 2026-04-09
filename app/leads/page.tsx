@@ -11,18 +11,19 @@ const SOURCES = [
 ]
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
-  new:         { bg: '#f5f5f5',  text: '#888',    label: 'New' },
-  appointment: { bg: '#FAEEDA',  text: '#633806', label: 'Appointment' },
-  proposal:    { bg: '#E6F1FB',  text: '#0C447C', label: 'Proposal' },
-  pending:     { bg: '#EDE9FE',  text: '#4C1D95', label: 'Pending' },
+  uncontacted:      { bg: '#f5f5f5',  text: '#888',    label: 'Uncontacted' },
+  appointment_set:  { bg: '#FAEEDA',  text: '#633806', label: 'Appointment Set' },
+  proposal_sent:    { bg: '#E6F1FB',  text: '#0C447C', label: 'Proposal Sent' },
+  needs_reschedule: { bg: '#F3E8FF',  text: '#581C87', label: 'Needs Reschedule' },
 }
 
 const RESULT_BADGE: Record<string, { bg: string; text: string; label: string }> = {
-  sold:       { bg: '#EAF3DE',  text: '#27500A', label: 'Sold' },
-  price_high: { bg: '#FCEBEB',  text: '#7F1D1D', label: 'Price High' },
-  competitor: { bg: '#FEF3C7',  text: '#78350F', label: 'Competitor' },
-  future:     { bg: '#E0F2FE',  text: '#0C4A6E', label: 'Future Date' },
-  finance:    { bg: '#F3E8FF',  text: '#581C87', label: 'Financing' },
+  working:          { bg: '#E6F1FB',  text: '#0C447C', label: 'Working' },
+  sold:             { bg: '#EAF3DE',  text: '#27500A', label: 'Sold' },
+  competitor:       { bg: '#FEF3C7',  text: '#78350F', label: 'Competitor' },
+  not_interested:   { bg: '#FCEBEB',  text: '#7F1D1D', label: 'Not Interested' },
+  future_date:      { bg: '#E0F2FE',  text: '#0C4A6E', label: 'Future Date' },
+  finance_turndown: { bg: '#F3E8FF',  text: '#581C87', label: 'Finance Turndown' },
 }
 
 export default function LeadsPage() {
@@ -67,7 +68,7 @@ export default function LeadsPage() {
   async function addLead(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
-    await supabase.from('leads').insert([{ name, email, phone, service, source, address, status: 'new' }])
+    await supabase.from('leads').insert([{ name, email, phone, service, source, address, status: 'uncontacted' }])
     setName(''); setEmail(''); setPhone(''); setService(''); setSource(''); setAddress('')
     setShowAddLead(false)
     getLeads()
@@ -116,39 +117,26 @@ export default function LeadsPage() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#f4f7fb' }}>
-
       <NavSidebar />
 
-      {/* ── MAIN ─────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* Top bar */}
         <div className="flex-shrink-0 flex items-center justify-between px-8 py-4" style={{ background: 'white', borderBottom: '0.5px solid #eee' }}>
           <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Leads</h1>
-          <button
-            onClick={() => setShowAddLead(true)}
-            style={{ background: '#185FA5', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-          >
+          <button onClick={() => setShowAddLead(true)} style={{ background: '#185FA5', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
             + Add Lead
           </button>
         </div>
 
-        {/* Search */}
         <div className="flex-shrink-0 px-8 py-4">
-          <input
-            placeholder="Search leads..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '100%', boxSizing: 'border-box', padding: '9px 14px', borderRadius: 10, border: '0.5px solid #e0e0e0', background: 'white', fontSize: 14, outline: 'none' }}
-          />
+          <input placeholder="Search leads..." value={search} onChange={(e) => setSearch(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '9px 14px', borderRadius: 10, border: '0.5px solid #e0e0e0', background: 'white', fontSize: 14, outline: 'none' }} />
         </div>
 
-        {/* Table */}
         <div className="flex-1 overflow-y-auto px-8 pb-8">
           <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', overflow: 'hidden' }}>
 
-            {/* Column headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 130px 140px 160px 60px', padding: '9px 16px', borderBottom: '0.5px solid #f0f0f0', background: '#fafafa' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 130px 160px 180px 60px', padding: '9px 16px', borderBottom: '0.5px solid #f0f0f0', background: '#fafafa' }}>
               {['Name', 'Address', 'Source', 'Status', 'Result', ''].map((h) => (
                 <span key={h} style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
               ))}
@@ -161,9 +149,8 @@ export default function LeadsPage() {
             )}
 
             {filteredLeads.map((lead, i) => (
-              <div
-                key={lead.id}
-                style={{ display: 'grid', gridTemplateColumns: '180px 1fr 130px 140px 160px 60px', alignItems: 'center', padding: '12px 16px', borderBottom: i < filteredLeads.length - 1 ? '0.5px solid #f5f5f5' : 'none', cursor: 'pointer', transition: 'background 0.1s', gap: 8 }}
+              <div key={lead.id}
+                style={{ display: 'grid', gridTemplateColumns: '180px 1fr 130px 160px 180px 60px', alignItems: 'center', padding: '12px 16px', borderBottom: i < filteredLeads.length - 1 ? '0.5px solid #f5f5f5' : 'none', cursor: 'pointer', gap: 8 }}
                 onMouseOver={(e) => (e.currentTarget.style.background = '#fafafa')}
                 onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
                 onClick={() => { setSelectedLead(lead); getNotes(lead.id); getProposals(lead.id) }}
@@ -172,48 +159,40 @@ export default function LeadsPage() {
                   <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</p>
                   <p style={{ fontSize: 12, color: '#aaa', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.service || '—'}</p>
                 </div>
-
                 <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.4 }}>{lead.address || '—'}</p>
                 <p style={{ fontSize: 13, color: '#555', margin: 0 }}>{lead.source || '—'}</p>
 
                 <div onClick={(e) => e.stopPropagation()}>
-                  <select
-                    value={lead.status || 'new'}
-                    onChange={(e) => updateStatus(lead.id, e.target.value)}
-                    style={{ fontSize: 12, fontWeight: 500, padding: '5px 10px', borderRadius: 20, border: 'none', outline: 'none', cursor: 'pointer', background: STATUS_BADGE[lead.status]?.bg || '#f5f5f5', color: STATUS_BADGE[lead.status]?.text || '#888', appearance: 'none', WebkitAppearance: 'none' }}
-                  >
-                    <option value="new">New</option>
-                    <option value="appointment">Appointment</option>
-                    <option value="proposal">Proposal</option>
-                    <option value="pending">Pending</option>
+                  <select value={lead.status || 'uncontacted'} onChange={(e) => updateStatus(lead.id, e.target.value)}
+                    style={{ fontSize: 12, fontWeight: 500, padding: '5px 10px', borderRadius: 20, border: 'none', outline: 'none', cursor: 'pointer', background: STATUS_BADGE[lead.status]?.bg || '#f5f5f5', color: STATUS_BADGE[lead.status]?.text || '#888', appearance: 'none', WebkitAppearance: 'none' }}>
+                    <option value="uncontacted">Uncontacted</option>
+                    <option value="appointment_set">Appointment Set</option>
+                    <option value="proposal_sent">Proposal Sent</option>
+                    <option value="needs_reschedule">Needs Reschedule</option>
                   </select>
                 </div>
 
                 <div onClick={(e) => e.stopPropagation()}>
-                  <select
-                    value={lead.result || ''}
-                    onChange={(e) => updateResult(lead.id, e.target.value)}
-                    style={{ fontSize: 12, fontWeight: 500, padding: '5px 10px', borderRadius: 20, border: 'none', outline: 'none', cursor: 'pointer', background: lead.result ? (RESULT_BADGE[lead.result]?.bg || '#f5f5f5') : '#f5f5f5', color: lead.result ? (RESULT_BADGE[lead.result]?.text || '#888') : '#bbb', appearance: 'none', WebkitAppearance: 'none' }}
-                  >
+                  <select value={lead.result || ''} onChange={(e) => updateResult(lead.id, e.target.value)}
+                    style={{ fontSize: 12, fontWeight: 500, padding: '5px 10px', borderRadius: 20, border: 'none', outline: 'none', cursor: 'pointer', background: lead.result ? (RESULT_BADGE[lead.result]?.bg || '#f5f5f5') : '#f5f5f5', color: lead.result ? (RESULT_BADGE[lead.result]?.text || '#888') : '#bbb', appearance: 'none', WebkitAppearance: 'none' }}>
                     <option value="">—</option>
+                    <option value="working">Working</option>
                     <option value="sold">Sold</option>
-                    <option value="price_high">Price Too High</option>
-                    <option value="competitor">Competitor</option>
-                    <option value="future">Future Date</option>
-                    <option value="finance">Financing</option>
+                    <option value="competitor">Went With Competitor</option>
+                    <option value="not_interested">Not Interested in Pool</option>
+                    <option value="future_date">Waiting for Future Date</option>
+                    <option value="finance_turndown">Finance Turndown</option>
                   </select>
                 </div>
 
-                <button onClick={(e) => deleteLead(lead.id, e)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-                  Delete
-                </button>
+                <button onClick={(e) => deleteLead(lead.id, e)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>Delete</button>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── ADD LEAD MODAL ────────────────────────────────────────────── */}
+      {/* Add Lead Modal */}
       {showAddLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAddLead(false)}>
           <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 440, margin: '0 16px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
@@ -253,7 +232,6 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* ── LEAD DETAIL MODAL ─────────────────────────────────────────── */}
       <LeadModal
         selectedLead={selectedLead}
         setSelectedLead={setSelectedLead}
@@ -266,7 +244,6 @@ export default function LeadsPage() {
         onLeadUpdated={getLeads}
         serviceOptions={serviceOptions}
       />
-
     </div>
   )
 }

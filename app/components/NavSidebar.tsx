@@ -11,7 +11,7 @@ function NavItem({ href, label, icon }: { href: string; label: string; icon: Rea
       <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ background: active ? 'rgba(255,255,255,0.2)' : 'transparent' }}>
         {icon}
       </div>
-      <span style={{ fontSize: '10px', color: active ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: active ? 500 : 400 }}>
+      <span style={{ fontSize: '10px', color: active ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: active ? 500 : 400, textAlign: 'center', lineHeight: 1.2 }}>
         {label}
       </span>
     </Link>
@@ -20,10 +20,10 @@ function NavItem({ href, label, icon }: { href: string; label: string; icon: Rea
 
 export default function NavSidebar() {
   return (
-    <aside className="flex flex-col items-center py-5 gap-5 flex-shrink-0 print:hidden" style={{ width: '68px', background: '#0C447C' }}>
+    <aside className="flex flex-col items-center py-5 gap-4 flex-shrink-0 print:hidden" style={{ width: '68px', background: '#0C447C' }}>
 
       {/* Logo mark */}
-      <div className="mb-2" style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="mb-1" style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <rect x="2" y="2" width="5" height="5" rx="1" fill="white"/>
           <rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.6"/>
@@ -34,7 +34,7 @@ export default function NavSidebar() {
 
       <NavItem href="/" label="Home" icon={
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M2 7.5L9 2l7 5.5V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" style={{ color: 'rgba(255,255,255,0.6)' }}/>
+          <path d="M2 7.5L9 2l7 5.5V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5z" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinejoin="round"/>
           <rect x="6.5" y="10" width="5" height="7" rx="0.5" fill="rgba(255,255,255,0.6)"/>
         </svg>
       }/>
@@ -46,6 +46,15 @@ export default function NavSidebar() {
         </svg>
       }/>
 
+      <NavItem href="/lead-calendar" label="Lead Cal" icon={
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <rect x="1" y="3" width="16" height="14" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          <path d="M1 7h16" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          <path d="M5 1v4M13 1v4" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
+          <circle cx="9" cy="12" r="2" fill="rgba(255,255,255,0.6)"/>
+        </svg>
+      }/>
+
       <NavItem href="/projects" label="Projects" icon={
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <rect x="1" y="5" width="16" height="11" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
@@ -54,11 +63,12 @@ export default function NavSidebar() {
         </svg>
       }/>
 
-      <NavItem href="/calendar" label="Calendar" icon={
+      <NavItem href="/calendar" label="Prod Cal" icon={
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <rect x="1" y="3" width="16" height="14" rx="1.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
           <path d="M1 7h16" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
           <path d="M5 1v4M13 1v4" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
+          <path d="M5 11h8M5 14h5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
       }/>
 
