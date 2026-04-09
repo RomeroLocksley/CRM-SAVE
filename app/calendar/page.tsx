@@ -28,7 +28,7 @@ export default function CalendarPage() {
       const { data: stgs } = await supabase
         .from('project_stages').select('*').in('project_id', ids)
         .or('planned_start.not.is.null,started_at.not.is.null')
-        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
       setStages(stgs || [])
     }
   }
@@ -38,6 +38,7 @@ export default function CalendarPage() {
 
   const totalDays = daysInMonth(viewYear, viewMonth)
   const startDay = firstDayOfMonth(viewYear, viewMonth)
+  const todayStr = today.toISOString().slice(0, 10)
 
   function toDateStr(year: number, month: number, day: number): string {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -51,32 +52,61 @@ export default function CalendarPage() {
     return d >= s && d <= e
   }
 
-  function getEventsForDay(dateStr: string) {
-    const events: any[] = []
-    for (const stage of stages) {
-      const project = projects.find((p) => p.id === stage.project_id)
-      if (!project) continue
-      if (stage.started_at) {
-        const start = stage.started_at.slice(0, 10)
-        const end = stage.completed_at ? stage.completed_at.slice(0, 10) : start
-        if (dateInRange(dateStr, start, end)) {
-          events.push({ stage, project, isPlanned: false, isStart: dateStr === start, isEnd: dateStr === end })
-          continue
-        }
-      }
-      if (!stage.started_at && stage.planned_start) {
-        const start = stage.planned_start
-        const end = stage.planned_end || start
-        if (dateInRange(dateStr, start, end)) {
-          events.push({ stage, project, isPlanned: true, isStart: dateStr === start, isEnd: dateStr === end })
-        }
-      }
+  // Build a flat sorted list of all events with their date ranges
+  // Each event: { stageId, projectId, projectName, color, isPlanned, startDate, endDate, sortKey }
+  type CalEvent = {
+    stageId: string
+    projectId: string
+    projectName: string
+    color: string
+    isPlanned: boolean
+    startDate: string
+    endDate: string
+    stepName: string
+    sortKey: number // created_at order so oldest projects are first (top)
+  }
+
+  const allEvents: CalEvent[] = []
+  for (const stage of stages) {
+    const project = projects.find((p) => p.id === stage.project_id)
+    if (!project) continue
+    const sortKey = projects.indexOf(project)
+
+    if (stage.started_at) {
+      allEvents.push({
+        stageId: stage.id, projectId: project.id, projectName: project.name,
+        color: project.color || '#185FA5', isPlanned: false,
+        startDate: stage.started_at.slice(0, 10),
+        endDate: stage.completed_at ? stage.completed_at.slice(0, 10) : stage.started_at.slice(0, 10),
+        stepName: stage.step_name, sortKey,
+      })
+    } else if (stage.planned_start) {
+      allEvents.push({
+        stageId: stage.id, projectId: project.id, projectName: project.name,
+        color: project.color || '#185FA5', isPlanned: true,
+        startDate: stage.planned_start,
+        endDate: stage.planned_end || stage.planned_start,
+        stepName: stage.step_name, sortKey,
+      })
     }
-    return events
+  }
+
+  // Sort: oldest project first (top), then by start date
+  allEvents.sort((a, b) => a.sortKey - b.sortKey || a.startDate.localeCompare(b.startDate))
+
+  // For a given day, return events in order with metadata about continuity
+  function getEventsForDay(dateStr: string, dayOfWeek: number) {
+    return allEvents
+      .filter((ev) => dateInRange(dateStr, ev.startDate, ev.endDate))
+      .map((ev) => {
+        const isStart = ev.startDate === dateStr || dayOfWeek === 0
+        const isEnd = ev.endDate === dateStr || dayOfWeek === 6
+        const isSunday = dayOfWeek === 0
+        return { ...ev, isStart, isEnd, isSunday }
+      })
   }
 
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
-  const todayStr = today.toISOString().slice(0, 10)
 
   function prevMonth() {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1) }
@@ -109,7 +139,7 @@ export default function CalendarPage() {
               <button onClick={() => { setViewMonth(today.getMonth()); setViewYear(today.getFullYear()) }} style={{ padding: '5px 12px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 12, color: '#555', fontWeight: 500 }}>Today</button>
             </div>
           </div>
-          {/* Legend */}
+          {/* Project legend */}
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', maxWidth: 500, alignItems: 'center' }}>
             {projects.filter((p) => p.status !== 'completed').map((p) => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -132,47 +162,79 @@ export default function CalendarPage() {
           {/* Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, background: '#e8e8e8', border: '1px solid #e8e8e8', borderRadius: 12, overflow: 'hidden' }}>
             {cells.map((day, idx) => {
+              const dayOfWeek = idx % 7
               if (!day) return <div key={`empty-${idx}`} style={{ background: '#fafafa', minHeight: 110 }} />
               const dateStr = toDateStr(viewYear, viewMonth, day)
               const isToday = dateStr === todayStr
-              const events = getEventsForDay(dateStr)
+              const events = getEventsForDay(dateStr, dayOfWeek)
 
               return (
-                <div key={dateStr} style={{ background: 'white', minHeight: 110, padding: '6px 8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                <div key={dateStr} style={{ background: 'white', minHeight: 110, paddingBottom: 4 }}>
+                  {/* Day number */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 4px' }}>
                     <span style={{ fontSize: 12, fontWeight: isToday ? 600 : 400, width: 22, height: 22, borderRadius: '50%', background: isToday ? '#E24B4A' : 'transparent', color: isToday ? 'white' : '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {day}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {events.slice(0, 3).map((ev, ei) => {
-                      const color = ev.project.color || '#185FA5'
+
+                  {/* Events — continuous bars */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0 0' }}>
+                    {events.map((ev, ei) => {
+                      const color = ev.color
+                      const isContinuing = !ev.isStart
+                      const isEnding = ev.isEnd
+                      const isStarting = ev.isStart
+
                       return (
-                        <div key={`${ev.stage.id}-${ei}`}
-                          title={`${ev.project.name}: ${ev.stage.step_name}`}
+                        <div
+                          key={`${ev.stageId}-${ei}`}
+                          title={`${ev.projectName}: ${ev.stepName}`}
                           style={{
-                            fontSize: 10, fontWeight: 500, padding: '2px 6px', borderRadius: 4,
-                            background: ev.isPlanned ? `rgba(${hexToRgb(color)}, 0.15)` : `rgba(${hexToRgb(color)}, 0.9)`,
+                            height: 18,
+                            fontSize: 10,
+                            fontWeight: 500,
+                            lineHeight: '18px',
+                            paddingLeft: isStarting ? 6 : 0,
+                            paddingRight: isEnding ? 4 : 0,
+                            background: ev.isPlanned
+                              ? `rgba(${hexToRgb(color)}, 0.15)`
+                              : `rgba(${hexToRgb(color)}, 0.85)`,
                             color: ev.isPlanned ? color : 'white',
-                            border: ev.isPlanned ? `1px dashed ${color}` : 'none',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            borderTop: ev.isPlanned ? `1px dashed rgba(${hexToRgb(color)}, 0.7)` : 'none',
+                            borderBottom: ev.isPlanned ? `1px dashed rgba(${hexToRgb(color)}, 0.7)` : 'none',
+                            borderLeft: isStarting
+                              ? ev.isPlanned
+                                ? `1px dashed rgba(${hexToRgb(color)}, 0.7)`
+                                : 'none'
+                              : 'none',
+                            borderRight: isEnding
+                              ? ev.isPlanned
+                                ? `1px dashed rgba(${hexToRgb(color)}, 0.7)`
+                                : 'none'
+                              : 'none',
+                            borderRadius: `${isStarting ? 4 : 0}px ${isEnding ? 4 : 0}px ${isEnding ? 4 : 0}px ${isStarting ? 4 : 0}px`,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            // Extend to edges of cell for continuity
+                            marginLeft: isContinuing ? -1 : 2,
+                            marginRight: !isEnding ? -1 : 2,
                           }}
                         >
-                          {ev.isStart ? `${ev.project.name.split(' ')[0]}: ${ev.stage.step_name}` : '\u00A0'}
+                          {isStarting ? `${ev.projectName.split(' ')[0]}: ${ev.stepName}` : ''}
                         </div>
                       )
                     })}
-                    {events.length > 3 && <span style={{ fontSize: 10, color: '#aaa', paddingLeft: 4 }}>+{events.length - 3} more</span>}
                   </div>
                 </div>
               )
             })}
           </div>
 
-          {/* Bottom legend */}
+          {/* Legend */}
           <div style={{ display: 'flex', gap: 16, marginTop: 16, padding: '10px 16px', background: 'white', borderRadius: 10, border: '0.5px solid #e8e8e8', width: 'fit-content' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 20, height: 8, borderRadius: 3, background: 'rgba(24,95,165,0.9)' }} />
+              <div style={{ width: 20, height: 8, borderRadius: 3, background: 'rgba(24,95,165,0.85)' }} />
               <span style={{ fontSize: 12, color: '#555' }}>Actual / In Progress</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

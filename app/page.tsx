@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import NavSidebar from './components/NavSidebar'
 
+const MARKUP = 1.5 * 1.05
+
 const LOSS_REASON_LABELS: Record<string, string> = {
   price_high: 'Price Too High',
   competitor: 'Went With Competitor',
@@ -20,15 +22,25 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default function Dashboard() {
   const [leads, setLeads] = useState<any[]>([])
+  const [proposals, setProposals] = useState<any[]>([])
+  const [projects, setProjects] = useState<any[]>([])
 
   useEffect(() => {
     supabase.from('leads').select('*').then(({ data }) => setLeads(data || []))
+    supabase.from('proposals').select('id, status, total_price, lead_id').then(({ data }) => setProposals(data || []))
+    supabase.from('projects').select('id, status').then(({ data }) => setProjects(data || []))
   }, [])
 
   const totalLeads = leads.length
   const soldLeads = leads.filter((l) => l.result === 'sold').length
   const lostLeads = leads.filter((l) => l.result && l.result !== 'sold').length
   const closeRate = totalLeads ? ((soldLeads / totalLeads) * 100).toFixed(1) : '0.0'
+
+  // Signed proposals = sold contracts
+  const signedProposals = proposals.filter((p) => p.status === 'signed')
+  const totalSoldValue = signedProposals.reduce((sum, p) => sum + Number(p.total_price || 0), 0) * MARKUP
+  const avgContractPrice = signedProposals.length > 0 ? totalSoldValue / signedProposals.length : 0
+  const activeProjects = projects.filter((p) => p.status === 'active').length
 
   const lossReasons: Record<string, number> = {}
   leads.forEach((l) => { if (l.result && l.result !== 'sold') lossReasons[l.result] = (lossReasons[l.result] || 0) + 1 })
@@ -39,21 +51,23 @@ export default function Dashboard() {
   const statusCounts: Record<string, number> = {}
   leads.forEach((l) => { if (l.status) statusCounts[l.status] = (statusCounts[l.status] || 0) + 1 })
 
+  function fmtMoney(n: number) {
+    return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  }
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#f4f7fb' }}>
-
       <NavSidebar />
 
-      {/* ── MAIN ─────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         <div style={{ flexShrink: 0, padding: '16px 32px', background: 'white', borderBottom: '0.5px solid #eee' }}>
           <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Dashboard</h1>
         </div>
 
         <div className="flex-1 overflow-y-auto" style={{ padding: 32 }}>
 
-          {/* KPI cards */}
+          {/* Lead KPI cards */}
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Leads</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
             {[
               { label: 'Total Leads', value: totalLeads, color: '#1a1a2e' },
@@ -68,7 +82,23 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Second row */}
+          {/* Revenue / Projects KPI cards */}
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Business</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+            {[
+              { label: 'Total Sold Value', value: fmtMoney(totalSoldValue), color: '#27500A', sub: `${signedProposals.length} signed contract${signedProposals.length !== 1 ? 's' : ''}` },
+              { label: 'Avg Contract Price', value: fmtMoney(avgContractPrice), color: '#185FA5', sub: 'Per signed proposal' },
+              { label: 'Active Projects', value: activeProjects, color: '#0F6E56', sub: `${projects.filter(p => p.status === 'completed').length} completed` },
+            ].map(({ label, value, color, sub }) => (
+              <div key={label} style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '20px 24px' }}>
+                <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+                <p style={{ fontSize: 28, fontWeight: 600, margin: '0 0 4px', color }}>{value}</p>
+                <p style={{ fontSize: 12, color: '#bbb', margin: 0 }}>{sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
 
             {/* Pipeline */}

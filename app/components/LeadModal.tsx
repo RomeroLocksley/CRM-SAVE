@@ -3,17 +3,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
+const MARKUP = 1.5 * 1.05
+
 const SOURCES = [
-  'Referral',
-  'Google Call In',
-  'Google Website Form',
-  'Barrier Reef',
-  'Facebook',
-  'Instagram',
-  'TikTok',
-  'YouTube',
-  'Vehicle Wrap',
-  'Other',
+  'Referral', 'Google Call In', 'Google Website Form', 'Barrier Reef',
+  'Facebook', 'Instagram', 'TikTok', 'YouTube', 'Vehicle Wrap', 'Other',
 ]
 
 const STATUS_DOT: Record<string, string> = {
@@ -51,16 +45,8 @@ function formatTimestamp(ts: string) {
 }
 
 export default function LeadModal({
-  selectedLead,
-  setSelectedLead,
-  notes,
-  noteText,
-  setNoteText,
-  addNote,
-  proposals,
-  onProposalDeleted,
-  onLeadUpdated,
-  serviceOptions,
+  selectedLead, setSelectedLead, notes, noteText, setNoteText,
+  addNote, proposals, onProposalDeleted, onLeadUpdated, serviceOptions,
 }: any) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
@@ -89,39 +75,23 @@ export default function LeadModal({
   if (!selectedLead) return null
 
   async function saveLead() {
-    const { error } = await supabase
-      .from('leads')
-      .update({
-        name: editName,
-        email: editEmail,
-        phone: editPhone,
-        address: editAddress,
-        service: editService,
-        source: editSource,
-        status: editStatus,
-        result: editResult,
-      })
-      .eq('id', selectedLead.id)
-
+    const { error } = await supabase.from('leads').update({
+      name: editName, email: editEmail, phone: editPhone, address: editAddress,
+      service: editService, source: editSource, status: editStatus, result: editResult,
+    }).eq('id', selectedLead.id)
     if (error) { console.error(error); return }
     setEditing(false)
     if (onLeadUpdated) onLeadUpdated()
   }
 
   async function createProposal() {
-    const { data, error } = await supabase
-      .from('proposals')
-      .insert([{ lead_id: selectedLead.id, title: 'New Proposal' }])
-      .select()
-      .single()
-
+    const { data, error } = await supabase.from('proposals').insert([{ lead_id: selectedLead.id, title: 'New Proposal' }]).select().single()
     if (error) { console.error(error); return }
     window.location.href = `/proposals/new?proposalId=${data.id}`
   }
 
   async function deleteProposal(proposalId: string, e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault(); e.stopPropagation()
     const confirmed = window.confirm('Delete this proposal and all its data? This cannot be undone.')
     if (!confirmed) return
     await supabase.from('proposal_item_rows').delete().eq('proposal_id', proposalId)
@@ -140,28 +110,12 @@ export default function LeadModal({
   const resultBadge = selectedLead.result ? RESULT_BADGE[selectedLead.result] : null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.4)' }}
-      onClick={() => setSelectedLead(null)}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setSelectedLead(null)}>
       <div
-        style={{
-          background: 'white',
-          borderRadius: 20,
-          width: '100%',
-          maxWidth: 460,
-          margin: '0 16px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
+        style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 460, margin: '0 16px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         onClick={(e) => e.stopPropagation()}
       >
-
-        {/* ── Fixed header ───────────────────────────────────────────── */}
+        {/* Fixed header */}
         <div style={{ padding: '24px 24px 0', flexShrink: 0 }}>
 
           {/* Avatar + name + buttons */}
@@ -185,22 +139,14 @@ export default function LeadModal({
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                onClick={() => setEditing(!editing)}
-                style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, border: '0.5px solid #e0e0e0', background: 'transparent', color: '#666', cursor: 'pointer' }}
-              >
+              <button onClick={() => setEditing(!editing)} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, border: '0.5px solid #e0e0e0', background: 'transparent', color: '#666', cursor: 'pointer' }}>
                 {editing ? 'Cancel' : 'Edit'}
               </button>
-              <button
-                onClick={() => setSelectedLead(null)}
-                style={{ color: '#ccc', background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}
-              >
-                ✕
-              </button>
+              <button onClick={() => setSelectedLead(null)} style={{ color: '#ccc', background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>✕</button>
             </div>
           </div>
 
-          {/* Contact tiles or edit form */}
+          {/* Edit form or contact tiles */}
           {editing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               {[
@@ -211,36 +157,28 @@ export default function LeadModal({
               ].map(({ label, value, setter, type }) => (
                 <div key={label}>
                   <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>{label}</label>
-                  <input
-                    type={type}
-                    value={value}
-                    onChange={(e) => setter(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }}
-                  />
+                  <input type={type} value={value} onChange={(e) => setter(e.target.value)}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }} />
                 </div>
               ))}
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Service</label>
-                  <select value={editService} onChange={(e) => setEditService(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
+                  <select value={editService} onChange={(e) => setEditService(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
                     <option value="">— Select —</option>
                     {(serviceOptions || []).map((s: string) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Source</label>
-                  <select value={editSource} onChange={(e) => setEditSource(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
+                  <select value={editSource} onChange={(e) => setEditSource(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
                     <option value="">— Select —</option>
                     {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Status</label>
-                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
+                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
                     <option value="new">New</option>
                     <option value="appointment">Appointment</option>
                     <option value="proposal">Proposal</option>
@@ -249,8 +187,7 @@ export default function LeadModal({
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Result</label>
-                  <select value={editResult} onChange={(e) => setEditResult(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
+                  <select value={editResult} onChange={(e) => setEditResult(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }}>
                     <option value="">—</option>
                     <option value="sold">Sold</option>
                     <option value="price_high">Price Too High</option>
@@ -260,11 +197,7 @@ export default function LeadModal({
                   </select>
                 </div>
               </div>
-
-              <button
-                onClick={saveLead}
-                style={{ width: '100%', padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 14, border: 'none', cursor: 'pointer', marginTop: 4 }}
-              >
+              <button onClick={saveLead} style={{ width: '100%', padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 14, border: 'none', cursor: 'pointer', marginTop: 4 }}>
                 Save Changes
               </button>
             </div>
@@ -286,47 +219,36 @@ export default function LeadModal({
           )}
 
           {/* Create Proposal */}
-          <button
-            onClick={createProposal}
-            style={{ width: '100%', padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 14, border: 'none', cursor: 'pointer', marginBottom: 20 }}
-          >
+          <button onClick={createProposal} style={{ width: '100%', padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 14, border: 'none', cursor: 'pointer', marginBottom: 20 }}>
             + Create Proposal
           </button>
         </div>
 
-        {/* ── Scrollable section ──────────────────────────────────────── */}
+        {/* Scrollable section */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '0 24px 24px' }}>
 
           {/* Proposals */}
           <div style={{ marginBottom: 20 }}>
             <p style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>Proposals</p>
-
-            {(!proposals || proposals.length === 0) && (
-              <p style={{ fontSize: 13, color: '#bbb' }}>No proposals yet.</p>
-            )}
-
+            {(!proposals || proposals.length === 0) && <p style={{ fontSize: 13, color: '#bbb' }}>No proposals yet.</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {proposals?.map((p: any) => {
                 const status = p.status || 'draft'
                 const dotColor = STATUS_DOT[status] || STATUS_DOT.draft
+                const markedUpTotal = Number(p.total_price || 0) * MARKUP
                 return (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <a
-                      href={`/proposals/new?proposalId=${p.id}`}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#f9f9f9', borderRadius: 12, padding: '11px 14px', textDecoration: 'none' }}
-                    >
+                    <a href={`/proposals/new?proposalId=${p.id}`}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#f9f9f9', borderRadius: 12, padding: '11px 14px', textDecoration: 'none' }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
                         <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title || 'Untitled Proposal'}</p>
                         <p style={{ fontSize: 12, color: '#aaa', margin: '2px 0 0', textTransform: 'capitalize' }}>
-                          {status} &bull; ${Number(p.total_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          {status} &bull; {markedUpTotal > 0 ? `$${markedUpTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                         </p>
                       </div>
                     </a>
-                    <button
-                      onClick={(e) => deleteProposal(p.id, e)}
-                      style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', flexShrink: 0 }}
-                    >
+                    <button onClick={(e) => deleteProposal(p.id, e)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', flexShrink: 0 }}>
                       Delete
                     </button>
                   </div>
@@ -341,23 +263,13 @@ export default function LeadModal({
           {/* Notes */}
           <div>
             <p style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>Notes</p>
-
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <input
-                placeholder="Add a note…"
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addNote()}
-                style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#f9f9f9', fontSize: 14, outline: 'none' }}
-              />
-              <button
-                onClick={addNote}
-                style={{ padding: '9px 16px', borderRadius: 10, background: '#185FA5', color: 'white', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', flexShrink: 0 }}
-              >
+              <input placeholder="Add a note…" value={noteText} onChange={(e) => setNoteText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addNote()}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#f9f9f9', fontSize: 14, outline: 'none' }} />
+              <button onClick={addNote} style={{ padding: '9px 16px', borderRadius: 10, background: '#185FA5', color: 'white', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                 Add
               </button>
             </div>
-
             {sortedNotes.length === 0 ? (
               <p style={{ fontSize: 13, color: '#bbb' }}>No notes yet.</p>
             ) : (
