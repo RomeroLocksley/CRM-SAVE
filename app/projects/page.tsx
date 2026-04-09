@@ -79,6 +79,7 @@ export default function ProjectsPage() {
   const [tasks, setTasks] = useState<any[]>([])
   const [timeEntries, setTimeEntries] = useState<any[]>([])
   const [budgetItems, setBudgetItems] = useState<any[]>([])
+  const [budgetSections, setBudgetSections] = useState<any[]>([])
   const [actuals, setActuals] = useState<any[]>([])
 
   const [leads, setLeads] = useState<any[]>([])
@@ -132,7 +133,9 @@ export default function ProjectsPage() {
   }
 
   async function loadBudget(projectId: string, proposalId: string) {
+    const { data: sections } = await supabase.from('proposal_sections').select('*').eq('proposal_id', proposalId).order('created_at', { ascending: true })
     const { data: items } = await supabase.from('proposal_items').select('*, proposal_item_rows(*)').eq('proposal_id', proposalId)
+    setBudgetSections(sections || [])
     setBudgetItems(items || [])
     const { data: acts } = await supabase.from('project_budget_actuals').select('*').eq('project_id', projectId)
     setActuals(acts || [])
@@ -673,25 +676,44 @@ export default function ProjectsPage() {
                   {!project?.proposal_id ? (
                     <p style={{ fontSize: 13, color: '#bbb' }}>No proposal linked to this project.</p>
                   ) : (
-                    <div style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, overflow: 'hidden' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 120px 160px 80px', gap: 8, padding: '10px 16px', background: '#fafafa', borderBottom: '0.5px solid #f0f0f0' }}>
-                        {['Item', 'Cost Row', 'Budgeted', 'Actual', 'Notes', ''].map((h) => (
-                          <span key={h} style={{ fontSize: 11, color: '#aaa', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
-                        ))}
-                      </div>
-                      {nonLaborRows.map((row: any) => {
-                        const budgeted = Number(row.quantity || 0) * Number(row.unit_cost || 0)
-                        const actual = actuals.find((a) => a.proposal_item_row_id === row.id)
-                        const edit = actualEdits[row.id]
-                        const hasEdit = !!edit
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {budgetSections.map((section) => {
+                        // Get non-labor rows for this section only
+                        const sectionItems = budgetItems.filter((item: any) => item.section_id === section.id)
+                        const sectionRows = sectionItems.flatMap((item: any) =>
+                          (item.proposal_item_rows || []).map((row: any) => ({ ...row, item_name: item.name }))
+                        ).filter((row: any) => !isHourlyLaborRow(row))
+                        if (sectionRows.length === 0) return null
+                        const sectionBudgetTotal = sectionRows.reduce((sum: number, row: any) => sum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0)
                         return (
-                          <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 120px 160px 80px', gap: 8, padding: '10px 16px', borderBottom: '0.5px solid #f5f5f5', alignItems: 'center' }}>
-                            <span style={{ fontSize: 13, color: '#555' }}>{row.item_name}</span>
-                            <span style={{ fontSize: 13, color: '#555' }}>{row.name}</span>
-                            <span style={{ fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>${budgeted.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                            <input type="number" placeholder="Enter actual" value={edit?.actual_cost ?? (actual?.actual_cost || '')} onChange={(e) => setActualEdits((prev) => ({ ...prev, [row.id]: { actual_cost: e.target.value, notes: prev[row.id]?.notes ?? actual?.notes ?? '' } }))} style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }} />
-                            <input placeholder="Notes" value={edit?.notes ?? (actual?.notes || '')} onChange={(e) => setActualEdits((prev) => ({ ...prev, [row.id]: { actual_cost: prev[row.id]?.actual_cost ?? String(actual?.actual_cost ?? ''), notes: e.target.value } }))} style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }} />
-                            <button onClick={() => saveActual(row.id)} disabled={!hasEdit} style={{ ...btnPrimary, padding: '6px 10px', fontSize: 12, background: hasEdit ? projectColor : '#f0f0f0', color: hasEdit ? 'white' : '#bbb', cursor: hasEdit ? 'pointer' : 'not-allowed' }}>Save</button>
+                          <div key={section.id} style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, overflow: 'hidden' }}>
+                            {/* Section header */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#f5f9ff', borderBottom: '0.5px solid #e0eaf5' }}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: projectColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{section.name}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: projectColor }}>${sectionBudgetTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            {/* Column headers */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 120px 160px 80px', gap: 8, padding: '8px 16px', background: '#fafafa', borderBottom: '0.5px solid #f0f0f0' }}>
+                              {['Item', 'Cost Row', 'Budgeted', 'Actual', 'Notes', ''].map((h) => (
+                                <span key={h} style={{ fontSize: 11, color: '#aaa', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+                              ))}
+                            </div>
+                            {sectionRows.map((row: any, ri: number) => {
+                              const budgeted = Number(row.quantity || 0) * Number(row.unit_cost || 0)
+                              const actual = actuals.find((a: any) => a.proposal_item_row_id === row.id)
+                              const edit = actualEdits[row.id]
+                              const hasEdit = !!edit
+                              return (
+                                <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 120px 160px 80px', gap: 8, padding: '10px 16px', borderBottom: ri < sectionRows.length - 1 ? '0.5px solid #f5f5f5' : 'none', alignItems: 'center' }}>
+                                  <span style={{ fontSize: 13, color: '#555' }}>{row.item_name}</span>
+                                  <span style={{ fontSize: 13, color: '#555' }}>{row.name}</span>
+                                  <span style={{ fontSize: 13, color: '#1a1a2e', fontWeight: 500 }}>${budgeted.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                  <input type="number" placeholder="Enter actual" value={edit?.actual_cost ?? (actual?.actual_cost || '')} onChange={(e) => setActualEdits((prev) => ({ ...prev, [row.id]: { actual_cost: e.target.value, notes: prev[row.id]?.notes ?? actual?.notes ?? '' } }))} style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }} />
+                                  <input placeholder="Notes" value={edit?.notes ?? (actual?.notes || '')} onChange={(e) => setActualEdits((prev) => ({ ...prev, [row.id]: { actual_cost: prev[row.id]?.actual_cost ?? String(actual?.actual_cost ?? ''), notes: e.target.value } }))} style={{ ...inputStyle, padding: '6px 8px', fontSize: 12 }} />
+                                  <button onClick={() => saveActual(row.id)} disabled={!hasEdit} style={{ ...btnPrimary, padding: '6px 10px', fontSize: 12, background: hasEdit ? projectColor : '#f0f0f0', color: hasEdit ? 'white' : '#bbb', cursor: hasEdit ? 'pointer' : 'not-allowed' }}>Save</button>
+                                </div>
+                              )
+                            })}
                           </div>
                         )
                       })}
