@@ -265,10 +265,28 @@ export default function ProjectsPage() {
   const totalHours = timeEntries.reduce((sum, e) => sum + hoursWorked(e), 0)
   const laborRate = project?.labor_rate || 75
   const totalLaborCost = totalHours * laborRate
-  const budgetedLaborHours = budgetItems.flatMap((item: any) => item.proposal_item_rows || [])
-    .filter((row: any) => row.unit?.toLowerCase().includes('hr') || row.name?.toLowerCase().includes('labor'))
-    .reduce((sum: number, row: any) => sum + Number(row.quantity || 0), 0)
-  const budgetedLaborCost = budgetedLaborHours * laborRate
+
+  // Labor-hours rows: name contains "labor" AND unit is explicitly hours
+  function isHourlyLaborRow(row: any): boolean {
+    const unit = (row.unit || '').toLowerCase().trim()
+    const name = (row.name || '').toLowerCase()
+    return ['hr', 'hrs', 'hour', 'hours'].includes(unit) && name.includes('labor')
+  }
+
+  // Group hourly labor rows by type for breakdown
+  const allRowsFlat = budgetItems.flatMap((item: any) => (item.proposal_item_rows || []).map((row: any) => ({ ...row, item_name: item.name })))
+  const hourlyLaborRows = allRowsFlat.filter(isHourlyLaborRow)
+  const laborByType: Record<string, { hours: number; rate: number; cost: number }> = {}
+  for (const row of hourlyLaborRows) {
+    const typeName = row.name || 'Labor'
+    const hrs = Number(row.quantity || 0)
+    const rate = Number(row.unit_cost || 0)
+    if (!laborByType[typeName]) laborByType[typeName] = { hours: 0, rate, cost: 0 }
+    laborByType[typeName].hours += hrs
+    laborByType[typeName].cost += hrs * rate
+  }
+  const budgetedLaborHours = hourlyLaborRows.reduce((sum: number, row: any) => sum + Number(row.quantity || 0), 0)
+  const budgetedLaborCost = hourlyLaborRows.reduce((sum: number, row: any) => sum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0)
 
   // ─── Budget actuals ────────────────────────────────────────────────────────
 
@@ -296,8 +314,8 @@ export default function ProjectsPage() {
 
   const overallPct = stages.length > 0 ? Math.round((stages.filter((s) => s.completed).length / stages.length) * 100) : 0
 
-  const allRows = budgetItems.flatMap((item: any) => (item.proposal_item_rows || []).map((row: any) => ({ ...row, item_name: item.name })))
-  const nonLaborRows = allRows.filter((row: any) => !(row.unit?.toLowerCase().includes('hr') || row.name?.toLowerCase().includes('labor')))
+  // Non-labor rows: anything that is NOT an hourly labor row
+  const nonLaborRows = allRowsFlat.filter((row: any) => !isHourlyLaborRow(row))
   const totalBudgetedMaterials = nonLaborRows.reduce((sum, row) => sum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0)
   const totalActualMaterials = nonLaborRows.reduce((sum, row) => { const act = actuals.find((a) => a.proposal_item_row_id === row.id); return sum + Number(act?.actual_cost || 0) }, 0)
 
@@ -601,7 +619,7 @@ export default function ProjectsPage() {
                       { label: 'Contract Budget', value: `$${Number(project?.budget || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#1a1a2e' },
                       { label: 'Budgeted Materials', value: `$${totalBudgetedMaterials.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#185FA5' },
                       { label: 'Actual Materials', value: `$${totalActualMaterials.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: totalActualMaterials > totalBudgetedMaterials ? '#A32D2D' : '#27500A' },
-                      { label: 'Labor Cost', value: `$${totalLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: totalLaborCost > budgetedLaborCost ? '#A32D2D' : '#27500A' },
+                      { label: 'Budgeted Labor', value: `$${budgetedLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#185FA5' },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, padding: '16px 20px' }}>
                         <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>{label}</p>
@@ -610,15 +628,47 @@ export default function ProjectsPage() {
                     ))}
                   </div>
                   <div style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 10px' }}>Labor Summary</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                      {[{ label: 'Budgeted Hours', value: `${budgetedLaborHours.toFixed(1)} hrs` }, { label: 'Actual Hours', value: `${totalHours.toFixed(1)} hrs` }, { label: 'Labor Rate', value: `$${laborRate}/hr` }].map(({ label, value }) => (
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 12px' }}>Labor Summary</p>
+                    {/* Totals row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 14 }}>
+                      {[
+                        { label: 'Total Budgeted Hours', value: `${budgetedLaborHours.toFixed(1)} hrs` },
+                        { label: 'Total Budgeted Labor Cost', value: `$${budgetedLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}` },
+                        { label: 'Actual Hours Clocked', value: `${totalHours.toFixed(1)} hrs` },
+                      ].map(({ label, value }) => (
                         <div key={label} style={{ background: '#fafafa', borderRadius: 10, padding: '10px 14px' }}>
                           <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 4px' }}>{label}</p>
                           <p style={{ fontSize: 15, fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{value}</p>
                         </div>
                       ))}
                     </div>
+                    {/* Per-type breakdown */}
+                    {Object.keys(laborByType).length > 0 && (
+                      <div style={{ border: '0.5px solid #f0f0f0', borderRadius: 10, overflow: 'hidden' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 120px', gap: 8, padding: '8px 14px', background: '#fafafa', borderBottom: '0.5px solid #f0f0f0' }}>
+                          {['Labor Type', 'Rate', 'Budgeted Hrs', 'Budgeted Cost'].map((h) => (
+                            <span key={h} style={{ fontSize: 11, color: '#aaa', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+                          ))}
+                        </div>
+                        {Object.entries(laborByType).map(([type, data]) => (
+                          <div key={type} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 120px', gap: 8, padding: '10px 14px', borderBottom: '0.5px solid #f5f5f5', alignItems: 'center' }}>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e' }}>{type}</span>
+                            <span style={{ fontSize: 13, color: '#555' }}>${data.rate}/hr</span>
+                            <span style={{ fontSize: 13, color: '#555' }}>{data.hours.toFixed(1)} hrs</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: projectColor }}>${data.cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        ))}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 120px', gap: 8, padding: '10px 14px', background: '#fafafa', alignItems: 'center' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>Total</span>
+                          <span style={{ fontSize: 13, color: '#aaa' }}>—</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{budgetedLaborHours.toFixed(1)} hrs</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: projectColor }}>${budgetedLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+                    )}
+                    {Object.keys(laborByType).length === 0 && (
+                      <p style={{ fontSize: 13, color: '#bbb', margin: 0 }}>No hourly labor rows found in this proposal.</p>
+                    )}
                   </div>
                   {!project?.proposal_id ? (
                     <p style={{ fontSize: 13, color: '#bbb' }}>No proposal linked to this project.</p>
