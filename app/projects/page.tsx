@@ -13,7 +13,7 @@ const STAGES = [
   {
     stage: 'Pre-Construction',
     steps: [
-      'Draft drawings created', 'Sent to engineer', 'Prepare permit package',
+      'Draft drawings created', 'Sent to engineer', 'Prepare permit package', 'Permits submitted',
       'Walk through with project manager', 'Finalize selections', 'Finalize internal drawings',
       'HOA approved', 'Permits approved', 'Pool ordered / delivery date set', 'Pre-construction inspection',
     ],
@@ -166,10 +166,16 @@ export default function ProjectsPage() {
       const { data: prop } = await supabase.from('proposals').select('total_price').eq('id', selectedProposalId).single()
       budget = prop?.total_price || null
     }
+    // Auto-assign next project number
+    const { data: existingProjects } = await supabase.from('projects').select('project_number').order('project_number', { ascending: false }).limit(1)
+    const nextNumber = existingProjects && existingProjects.length > 0 && existingProjects[0].project_number
+      ? existingProjects[0].project_number + 1
+      : 1
     const { data: newProject, error } = await supabase.from('projects').insert([{
       name: newProjectName.trim(), lead_id: selectedLeadId || null,
       proposal_id: selectedProposalId || null, service: newProjectService || null,
       status: 'active', budget, labor_rate: Number(newProjectLaborRate) || 75, color: newProjectColor,
+      project_number: nextNumber,
     }]).select().single()
     if (error) { console.error(error); return }
     const stageRows = ALL_STEPS.map((s, i) => ({ project_id: newProject.id, stage: s.stage, step_name: s.step_name, sort_order: i, completed: false }))
@@ -363,7 +369,10 @@ export default function ProjectsPage() {
             >
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: p.color || '#185FA5', flexShrink: 0 }} />
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: selectedProjectId === p.id ? '#0C447C' : '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {p.project_number && <span style={{ fontSize: 10, fontWeight: 600, color: selectedProjectId === p.id ? '#0C447C' : '#aaa', background: selectedProjectId === p.id ? '#d0e6f7' : '#f0f0f0', padding: '1px 6px', borderRadius: 20, flexShrink: 0 }}>#{p.project_number}</span>}
+                  <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: selectedProjectId === p.id ? '#0C447C' : '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                </div>
                 <p style={{ fontSize: 11, color: '#aaa', margin: '3px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.leads?.name || '—'}</p>
                 <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 20, background: p.status === 'completed' ? '#EAF3DE' : p.status === 'on_hold' ? '#FAEEDA' : '#E6F1FB', color: p.status === 'completed' ? '#27500A' : p.status === 'on_hold' ? '#633806' : '#0C447C', fontWeight: 500, display: 'inline-block', marginTop: 4 }}>
                   {p.status === 'on_hold' ? 'On Hold' : p.status === 'completed' ? 'Completed' : 'Active'}
@@ -388,7 +397,10 @@ export default function ProjectsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 12, height: 12, borderRadius: '50%', background: projectColor, flexShrink: 0 }} />
                   <div>
-                    <p style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>{project?.name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {project?.project_number && <span style={{ fontSize: 12, fontWeight: 600, color: projectColor, background: `rgba(${hexToRgb(projectColor)}, 0.1)`, padding: '2px 8px', borderRadius: 20 }}>#{project.project_number}</span>}
+                      <p style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>{project?.name}</p>
+                    </div>
                     <p style={{ fontSize: 12, color: '#aaa', margin: '2px 0 0' }}>{project?.leads?.name} &bull; {project?.leads?.address}</p>
                   </div>
                 </div>
@@ -833,16 +845,19 @@ export default function ProjectsPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Project Name *</label>
-                <input value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} placeholder="e.g. Smith Residence Pool" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
-              </div>
-              <div>
                 <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Customer (Lead) *</label>
                 <select value={selectedLeadId} onChange={async (e) => {
-                  setSelectedLeadId(e.target.value); setSelectedProposalId('')
-                  if (e.target.value) {
-                    const { data } = await supabase.from('proposals').select('id, title, total_price').eq('lead_id', e.target.value).eq('status', 'signed')
+                  const leadId = e.target.value
+                  setSelectedLeadId(leadId); setSelectedProposalId(''); setLeadProposals([])
+                  if (leadId) {
+                    const { data } = await supabase.from('proposals').select('id, title, total_price').eq('lead_id', leadId).eq('status', 'signed')
                     setLeadProposals(data || [])
+                    // Auto-generate name: nextNumber - LastName
+                    const lead = leads.find((l: any) => l.id === leadId)
+                    const lastName = lead?.name?.split(' ').pop() || lead?.name || ''
+                    const { data: existing } = await supabase.from('projects').select('project_number').order('project_number', { ascending: false }).limit(1)
+                    const nextNum = existing && existing.length > 0 && existing[0].project_number ? existing[0].project_number + 1 : 1
+                    setNewProjectName(`${nextNum} - ${lastName}`)
                   }
                 }} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }}>
                   <option value="">— Select customer —</option>
@@ -852,12 +867,27 @@ export default function ProjectsPage() {
               {leadProposals.length > 0 && (
                 <div>
                   <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Linked Proposal (signed)</label>
-                  <select value={selectedProposalId} onChange={(e) => setSelectedProposalId(e.target.value)} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }}>
+                  <select value={selectedProposalId} onChange={(e) => {
+                    const propId = e.target.value
+                    setSelectedProposalId(propId)
+                    if (propId) {
+                      const proposal = leadProposals.find((p: any) => p.id === propId)
+                      const lead = leads.find((l: any) => l.id === selectedLeadId)
+                      const lastName = lead?.name?.split(' ').pop() || lead?.name || ''
+                      const numPart = newProjectName.split(' - ')[0] || '1'
+                      setNewProjectName(`${numPart} - ${lastName} - ${proposal?.title || ''}`)
+                    }
+                  }} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }}>
                     <option value="">— Select proposal —</option>
                     {leadProposals.map((p: any) => <option key={p.id} value={p.id}>{p.title} — ${Number(p.total_price || 0).toLocaleString()}</option>)}
                   </select>
                 </div>
               )}
+              <div>
+                <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Project Name</label>
+                <input value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} placeholder="Auto-filled when you select a customer" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                <p style={{ fontSize: 11, color: '#bbb', margin: '4px 0 0' }}>Auto-generated — edit freely</p>
+              </div>
               <div>
                 <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Service</label>
                 <input value={newProjectService} onChange={(e) => setNewProjectService(e.target.value)} placeholder="e.g. Fiberglass Pool" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />

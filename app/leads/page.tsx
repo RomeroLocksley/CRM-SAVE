@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import LeadModal from '../components/LeadModal'
 import NavSidebar from '../components/NavSidebar'
+import AddLeadModal from '../components/AddLeadModal'
 
 const SOURCES = [
   'Referral', 'Google Call In', 'Google Website Form', 'Barrier Reef',
@@ -36,12 +37,7 @@ export default function LeadsPage() {
   const [serviceOptions, setServiceOptions] = useState<string[]>([])
   const [showAddLead, setShowAddLead] = useState(false)
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [service, setService] = useState('')
-  const [source, setSource] = useState('')
-  const [address, setAddress] = useState('')
+  // form state moved into AddLeadModal component
 
   async function getLeads() {
     const { data } = await supabase.from('leads').select('*')
@@ -65,14 +61,7 @@ export default function LeadsPage() {
     setProposals(data || [])
   }
 
-  async function addLead(e: React.FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) return
-    await supabase.from('leads').insert([{ name, email, phone, service, source, address, status: 'uncontacted' }])
-    setName(''); setEmail(''); setPhone(''); setService(''); setSource(''); setAddress('')
-    setShowAddLead(false)
-    getLeads()
-  }
+  // addLead moved into AddLeadModal component
 
   async function deleteLead(leadId: string, e: React.MouseEvent) {
     e.stopPropagation()
@@ -194,42 +183,11 @@ export default function LeadsPage() {
 
       {/* Add Lead Modal */}
       {showAddLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAddLead(false)}>
-          <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 440, margin: '0 16px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: '24px 24px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <p style={{ fontSize: 16, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>New Lead</p>
-                <button onClick={() => setShowAddLead(false)} style={{ color: '#ccc', background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
-              </div>
-            </div>
-            <form onSubmit={addLead} style={{ padding: '0 24px 24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                {[
-                  { placeholder: 'Name *', value: name, setter: setName, type: 'text' },
-                  { placeholder: 'Email', value: email, setter: setEmail, type: 'email' },
-                  { placeholder: 'Phone', value: phone, setter: setPhone, type: 'tel' },
-                  { placeholder: 'Address', value: address, setter: setAddress, type: 'text' },
-                ].map(({ placeholder, value, setter, type }) => (
-                  <input key={placeholder} type={type} placeholder={placeholder} value={value} onChange={(e) => setter(e.target.value)}
-                    style={{ padding: '10px 12px', borderRadius: 12, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }} />
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-                <select value={service} onChange={(e) => setService(e.target.value)} style={{ padding: '10px 12px', borderRadius: 12, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none', color: service ? '#1a1a2e' : '#aaa' }}>
-                  <option value="">— Service —</option>
-                  {serviceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <select value={source} onChange={(e) => setSource(e.target.value)} style={{ padding: '10px 12px', borderRadius: 12, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none', color: source ? '#1a1a2e' : '#aaa' }}>
-                  <option value="">— Source —</option>
-                  {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <button type="submit" style={{ width: '100%', padding: '11px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 14, border: 'none', cursor: 'pointer' }}>
-                Add Lead
-              </button>
-            </form>
-          </div>
-        </div>
+        <AddLeadModal
+          onClose={() => setShowAddLead(false)}
+          onSaved={() => { setShowAddLead(false); getLeads() }}
+          serviceOptions={serviceOptions}
+        />
       )}
 
       <LeadModal
