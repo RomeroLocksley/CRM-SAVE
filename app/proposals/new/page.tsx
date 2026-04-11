@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import NavSidebar from '../../components/NavSidebar'
 
 type CostRow = {
   id: string
@@ -106,10 +107,11 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
     load()
   }, [proposalId])
 
+  const MARKUP = 1.5 * 1.05
   const grandTotal = sections.reduce((sTotal, section) =>
     sTotal + section.items.reduce((iTotal, item) =>
       iTotal + item.rows.reduce((rTotal, row) =>
-        rTotal + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0), 0), 0)
+        rTotal + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0), 0), 0) * MARKUP
 
   const printDate = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
 
@@ -169,7 +171,7 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
         {sections.map((section) => {
           const sectionTotal = section.items.reduce((sum, item) =>
             sum + item.rows.reduce((rSum, row) =>
-              rSum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0), 0)
+              rSum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0), 0) * MARKUP
 
           return (
             <div key={section.id} className="mb-8">
@@ -529,17 +531,44 @@ function ProposalBuilder() {
     // ── KEY FIX: h-screen instead of min-h-screen ──────────────────────────
     <div className="flex h-screen bg-[#f4f7fb] overflow-hidden">
 
-      {/* SIDEBAR — no scroll, stays fixed */}
-      <aside className="w-60 bg-white border-r border-gray-100 p-6 shadow-sm flex-shrink-0 print:hidden">
-        <h2 className="text-xl font-semibold mb-8">CRM</h2>
-        <nav className="flex flex-col gap-3 text-sm">
-          <Link href="/" className="text-gray-500 hover:text-blue-700">Dashboard</Link>
-          <Link href="/leads" className="text-gray-500 hover:text-blue-700">Leads</Link>
-          <Link href="/projects" className="text-gray-500 hover:text-blue-700">Projects</Link>
-          <Link href="/catalog" className="text-gray-500 hover:text-blue-700">Catalog</Link>
-          <Link href="/templates" className="text-gray-500 hover:text-blue-700">Templates</Link>
-        </nav>
-      </aside>
+      <NavSidebar />
+
+      {/* SECTIONS JUMP PANEL — only in builder mode with sections */}
+      {activeTab === 'builder' && sections.length > 0 && (
+        <div className="flex-shrink-0 print:hidden overflow-y-auto" style={{ width: 180, background: 'white', borderRight: '0.5px solid #eee' }}>
+          <div style={{ padding: '16px 12px 12px' }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>Jump to</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {sections.map((section) => (
+                <button key={section.id}
+                  onClick={() => {
+                    const el = document.getElementById(`section-${section.id}`)
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  style={{ textAlign: 'left', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#555', lineHeight: 1.3 }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E6F1FB'; e.currentTarget.style.color = '#0C447C' }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' }}
+                >
+                  {section.name}
+                </button>
+              ))}
+              <div style={{ borderTop: '0.5px solid #f0f0f0', marginTop: 6, paddingTop: 6 }}>
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('proposal-total')
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' })
+                  }}
+                  style={{ textAlign: 'left', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#aaa', width: '100%' }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#f5f5f5'; e.currentTarget.style.color = '#555' }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#aaa' }}
+                >
+                  Total
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MAIN — scrolls independently */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -657,7 +686,7 @@ function ProposalBuilder() {
             )}
 
             {sections.map((section, sIndex) => (
-              <div key={section.id} className="mb-10">
+              <div key={section.id} id={`section-${section.id}`} className="mb-10" style={{ scrollMarginTop: 20 }}>
                 <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">{section.name}</h2>
 
                 {section.items.map((item, iIndex) => {
@@ -739,7 +768,7 @@ function ProposalBuilder() {
             ))}
 
             {sections.length > 0 && (
-              <div className="flex justify-end mt-4">
+              <div id="proposal-total" className="flex justify-end mt-4">
                 <div className="bg-white border border-gray-200 rounded-xl px-8 py-5 shadow-sm text-right">
                   <p className="text-sm text-gray-400 mb-1">Proposal total</p>
                   <p className="text-2xl font-semibold text-blue-600">${proposalTotal.toFixed(2)}</p>
