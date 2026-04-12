@@ -10,12 +10,27 @@ export default function LoginPage() {
   async function signInWithGoogle() {
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithOAuth({
+
+    const redirectTo = process.env.NEXT_PUBLIC_SITE_URL
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+      : `${window.location.origin}/auth/callback`
+
+    console.log('[Login] redirectTo:', redirectTo)
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     })
+
+    console.log('[Login] OAuth data:', data)
+    console.log('[Login] OAuth error:', error)
+
     if (error) {
       setError(error.message)
       setLoading(false)

@@ -24,7 +24,7 @@ export async function updateSession(request: NextRequest) {
   // Refresh session
   const { data: { user } } = await supabase.auth.getUser()
 
-  // If not logged in and not already on the login page, redirect to login
+  // If not logged in and not on login or auth pages, redirect to login
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
