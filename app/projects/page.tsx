@@ -270,8 +270,8 @@ export default function ProjectsPage() {
   // ─── Time clock ────────────────────────────────────────────────────────────
 
   async function clockIn() {
-    if (!clockEmployee.trim() || !selectedProjectId) return
-    await supabase.from('time_clock').insert([{ project_id: selectedProjectId, employee_name: clockEmployee.trim(), clock_in: new Date().toISOString(), notes: clockNote.trim() || null }])
+    if (!selectedProjectId) return
+    await supabase.from('time_clock').insert([{ project_id: selectedProjectId, employee_name: currentUser, clock_in: new Date().toISOString(), notes: clockNote.trim() || null }])
     setClockNote(''); loadTimeEntries(selectedProjectId)
   }
 
@@ -377,7 +377,7 @@ export default function ProjectsPage() {
 
   async function mobileAddLog() {
     if (!mobileNewLog.trim() || !mobileProject) return
-    await supabase.from('project_daily_logs').insert([{ project_id: mobileProject.id, note: mobileNewLog.trim(), created_by: mobileClockEmployee || currentUser }])
+    await supabase.from('project_daily_logs').insert([{ project_id: mobileProject.id, note: mobileNewLog.trim(), created_by: currentUser }])
     setMobileNewLog('')
     const { data } = await supabase.from('project_daily_logs').select('*').eq('project_id', mobileProject.id).order('created_at', { ascending: false })
     setMobileLogs(data || [])
@@ -385,7 +385,7 @@ export default function ProjectsPage() {
 
   async function mobileClockIn() {
     if (!mobileClockEmployee.trim() || !mobileProject) return
-    await supabase.from('time_clock').insert([{ project_id: mobileProject.id, employee_name: mobileClockEmployee.trim(), clock_in: new Date().toISOString() }])
+    await supabase.from('time_clock').insert([{ project_id: mobileProject.id, employee_name: currentUser, clock_in: new Date().toISOString() }])
     const { data } = await supabase.from('time_clock').select('*').eq('project_id', mobileProject.id).order('clock_in', { ascending: false })
     setMobileTimeEntries(data || [])
   }
@@ -462,11 +462,6 @@ export default function ProjectsPage() {
                 <div>
                   <div style={{ background: 'white', borderRadius: 14, padding: '14px', marginBottom: 14, border: '0.5px solid #e8e8e8' }}>
                     <p style={{ fontSize: 13, fontWeight: 500, color: '#555', margin: '0 0 10px' }}>Add Update</p>
-                    <div style={{ marginBottom: 8 }}>
-                      <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Your Name</label>
-                      <input value={mobileClockEmployee} onChange={(e) => setMobileClockEmployee(e.target.value)} placeholder="Enter your name"
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }} />
-                    </div>
                     <textarea value={mobileNewLog} onChange={(e) => setMobileNewLog(e.target.value)} placeholder="What happened today?" rows={3}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none', resize: 'none', lineHeight: 1.5, marginBottom: 10 }} />
                     <button onClick={mobileAddLog} disabled={!mobileNewLog.trim()}
@@ -491,15 +486,13 @@ export default function ProjectsPage() {
               {/* Time Clock tab */}
               {mobileTab === 'timeclock' && (
                 <div>
-                  {/* Name input — persists across tabs */}
-                  <div style={{ background: 'white', borderRadius: 14, padding: '14px', marginBottom: 14, border: '0.5px solid #e8e8e8' }}>
-                    <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Your Name</label>
-                    <input value={mobileClockEmployee} onChange={(e) => setMobileClockEmployee(e.target.value)} placeholder="Enter your name"
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }} />
+                  {/* Show who is clocking in */}
+                  <div style={{ background: '#E6F1FB', borderRadius: 14, padding: '12px 14px', marginBottom: 14, border: '0.5px solid #c5d5e8' }}>
+                    <p style={{ fontSize: 12, color: '#0C447C', margin: 0 }}>Clocking in as <strong>{currentUser}</strong></p>
                   </div>
 
                   {/* Currently clocked in? */}
-                  {mobileTimeEntries.filter((e) => !e.clock_out && e.employee_name === mobileClockEmployee).map((entry) => (
+                  {mobileTimeEntries.filter((e) => !e.clock_out && e.employee_name === currentUser).map((entry) => (
                     <div key={entry.id} style={{ background: '#EAF3DE', border: '0.5px solid #c0dd97', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
                       <p style={{ fontSize: 13, fontWeight: 600, color: '#27500A', margin: '0 0 4px' }}>✓ Clocked in</p>
                       <p style={{ fontSize: 12, color: '#555', margin: '0 0 12px' }}>Since {formatTs(entry.clock_in)}</p>
@@ -511,9 +504,9 @@ export default function ProjectsPage() {
                   ))}
 
                   {/* Clock in button — only if not already clocked in */}
-                  {mobileTimeEntries.filter((e) => !e.clock_out && e.employee_name === mobileClockEmployee).length === 0 && (
-                    <button onClick={mobileClockIn} disabled={!mobileClockEmployee.trim()}
-                      style={{ width: '100%', padding: '16px', borderRadius: 14, background: mobileClockEmployee.trim() ? (mobileProject?.color || '#185FA5') : '#f0f0f0', color: mobileClockEmployee.trim() ? 'white' : '#bbb', fontSize: 16, fontWeight: 600, border: 'none', cursor: mobileClockEmployee.trim() ? 'pointer' : 'not-allowed', marginBottom: 14 }}>
+                  {mobileTimeEntries.filter((e) => !e.clock_out && e.employee_name === currentUser).length === 0 && (
+                    <button onClick={mobileClockIn}
+                      style={{ width: '100%', padding: '16px', borderRadius: 14, background: mobileProject?.color || '#185FA5', color: 'white', fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer', marginBottom: 14 }}>
                       Clock In to {mobileProject?.name}
                     </button>
                   )}
@@ -979,8 +972,8 @@ export default function ProjectsPage() {
                 <div>
                   <div style={{ background: 'white', border: '0.5px solid #e8e8e8', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
                     <p style={{ fontSize: 13, fontWeight: 500, color: '#555', margin: '0 0 10px' }}>Clock In</p>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <input placeholder="Employee name" value={clockEmployee} onChange={(e) => setClockEmployee(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, color: '#555', fontWeight: 500 }}>Clocking in as: <strong>{currentUser}</strong></span>
                       <input placeholder="Notes (optional)" value={clockNote} onChange={(e) => setClockNote(e.target.value)} style={{ ...inputStyle, flex: 2 }} />
                       <button onClick={clockIn} style={{ ...btnPrimary, background: projectColor }}>Clock In</button>
                     </div>
