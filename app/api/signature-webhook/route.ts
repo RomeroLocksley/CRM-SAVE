@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
       const { data: proposal, error: findError } = await supabase
         .from('proposals')
-        .select('id')
+        .select('id, lead_id')
         .eq('signature_request_id', signatureRequestId)
         .single()
 
@@ -93,6 +93,17 @@ export async function POST(req: NextRequest) {
           .eq('id', proposal.id)
 
         console.log('Update error:', updateError)
+
+        // ─── Update lead status and result when signed ─────────────────────
+        if (proposal.lead_id) {
+          await supabase
+            .from('leads')
+            .update({
+              status: 'proposal_sent',
+              result: 'sold',
+            })
+            .eq('id', proposal.lead_id)
+        }
       } else {
         const { data: allProposals } = await supabase
           .from('proposals')

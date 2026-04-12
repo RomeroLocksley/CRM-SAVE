@@ -211,6 +211,14 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', proposalId)
 
+    // ─── Update lead status to proposal_sent ──────────────────────────────
+    if (proposal.lead_id) {
+      await supabase
+        .from('leads')
+        .update({ status: 'proposal_sent' })
+        .eq('id', proposal.lead_id)
+    }
+
     return NextResponse.json({ success: true, signatureRequestId })
 
   } catch (err: any) {

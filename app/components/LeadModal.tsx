@@ -25,6 +25,13 @@ const STATUS_DOT: Record<string, string> = {
   signed: '#639922',
 }
 
+const PROPOSAL_STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  draft:  { bg: '#FCEBEB', text: '#A32D2D', label: 'Draft' },
+  sent:   { bg: '#FAEEDA', text: '#633806', label: 'Sent for Signature' },
+  viewed: { bg: '#E6F1FB', text: '#0C447C', label: 'Viewed' },
+  signed: { bg: '#EAF3DE', text: '#27500A', label: '✓ Signed' },
+}
+
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   uncontacted:      { bg: '#f5f5f5',  text: '#888' },
   appointment_set:  { bg: '#FAEEDA',  text: '#633806' },
@@ -477,13 +484,24 @@ export default function LeadModal({
                 const markedUpTotal = Number(p.total_price || 0) * MARKUP
                 return (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <a href={`/proposals/new?proposalId=${p.id}`} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: '#f9f9f9', borderRadius: 12, padding: '11px 14px', textDecoration: 'none' }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                      <div style={{ minWidth: 0 }}>
-                        <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title || 'Untitled Proposal'}</p>
-                        <p style={{ fontSize: 12, color: '#aaa', margin: '2px 0 0', textTransform: 'capitalize' }}>
-                          {status} &bull; {markedUpTotal > 0 ? `$${markedUpTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
-                        </p>
+                    <a href={`/proposals/new?proposalId=${p.id}`} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: status === 'signed' ? '#f0faf0' : '#f9f9f9', borderRadius: 12, padding: '11px 14px', textDecoration: 'none', border: status === 'signed' ? '0.5px solid #c0dd97' : '0.5px solid transparent' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                          <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title || 'Untitled Proposal'}</p>
+                          <span style={{ fontSize: 11, fontWeight: 600, background: (PROPOSAL_STATUS_BADGE[status] || PROPOSAL_STATUS_BADGE.draft).bg, color: (PROPOSAL_STATUS_BADGE[status] || PROPOSAL_STATUS_BADGE.draft).text, padding: '2px 8px', borderRadius: 20, flexShrink: 0 }}>
+                            {(PROPOSAL_STATUS_BADGE[status] || PROPOSAL_STATUS_BADGE.draft).label}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
+                            {markedUpTotal > 0 ? `$${markedUpTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
+                          </p>
+                          {p.signed_at && (
+                            <p style={{ fontSize: 12, color: '#27500A', margin: 0, fontWeight: 500 }}>
+                              &bull; Signed {new Date(p.signed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </a>
                     <button onClick={(e) => deleteProposal(p.id, e)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', flexShrink: 0 }}>Delete</button>
