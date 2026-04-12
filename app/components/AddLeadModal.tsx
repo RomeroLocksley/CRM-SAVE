@@ -119,9 +119,10 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
       <div
-        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)' }}
+        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)', WebkitOverflowScrolling: 'touch' }}
         className="md:rounded-[20px] md:max-w-[460px] md:m-4 md:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         {/* Handle bar for mobile */}
         <div className="md:hidden sticky top-0 bg-white pt-3 pb-1 z-10">
@@ -155,7 +156,12 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
             </div>
 
             {/* Address — Google PlaceAutocompleteElement or plain fallback */}
-            <div>
+            <div onFocus={() => {
+              // Small delay to let keyboard open, then scroll this field into view
+              setTimeout(() => {
+                containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }, 300)
+            }}>
               <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Address</label>
               {/* Google Places mounts here */}
               <div ref={containerRef} style={{ width: '100%', minHeight: placesReady ? 42 : 0 }} />

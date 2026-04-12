@@ -100,12 +100,23 @@ export default function LeadCalendarPage() {
 
         <div className="flex-1 flex flex-col overflow-hidden">
 
-          {/* Top bar */}
-          <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '12px 16px' }}>
-            {/* Row 1: title + month nav */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <h1 className="hidden md:block" style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Lead Calendar</h1>
-              <MobileHeader title="Lead Calendar" />
+          {/* Mobile header — title + avatar on own row */}
+          <MobileHeader title="Lead Calendar" />
+
+          {/* Top bar — month nav + desktop title */}
+          <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '10px 16px' }}>
+            {/* Desktop title row */}
+            <div className="hidden md:flex" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
+              <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Lead Calendar</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button onClick={prevMonth} style={{ width: 28, height: 28, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 16, color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', minWidth: 150, textAlign: 'center' }}>{monthName}</span>
+                <button onClick={nextMonth} style={{ width: 28, height: 28, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 16, color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                <button onClick={() => { setViewMonth(today.getMonth()); setViewYear(today.getFullYear()) }} style={{ padding: '5px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 12, color: '#555' }}>Today</button>
+              </div>
+            </div>
+            {/* Mobile: month nav row */}
+            <div className="md:hidden" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <button onClick={prevMonth} style={{ width: 32, height: 32, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 18, color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', minWidth: 110, textAlign: 'center' }}>{monthName}</span>
@@ -113,7 +124,7 @@ export default function LeadCalendarPage() {
                 <button onClick={() => { setViewMonth(today.getMonth()); setViewYear(today.getFullYear()) }} style={{ padding: '5px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 12, color: '#555' }}>Today</button>
               </div>
             </div>
-            {/* Row 2: mobile view toggle */}
+            {/* Mobile view toggle */}
             <div className="md:hidden flex" style={{ border: '0.5px solid #e5e5e5', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
               <button onClick={() => setMobileView('list')} style={{ padding: '6px 20px', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: mobileView === 'list' ? '#185FA5' : 'white', color: mobileView === 'list' ? 'white' : '#666' }}>List</button>
               <button onClick={() => setMobileView('calendar')} style={{ padding: '6px 20px', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: mobileView === 'calendar' ? '#185FA5' : 'white', color: mobileView === 'calendar' ? 'white' : '#666' }}>Calendar</button>
