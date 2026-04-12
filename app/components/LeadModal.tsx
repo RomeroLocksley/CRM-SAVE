@@ -94,6 +94,7 @@ export default function LeadModal({
   const [apptType, setApptType] = useState('')
   const [apptDate, setApptDate] = useState('')
   const [apptTime, setApptTime] = useState('')
+  const [apptEndTime, setApptEndTime] = useState('')
   const [apptNotes, setApptNotes] = useState('')
   const [savingAppt, setSavingAppt] = useState(false)
 
@@ -176,16 +177,18 @@ export default function LeadModal({
     if (!apptType || !apptDate || !apptTime) return
     setSavingAppt(true)
     const dateTime = new Date(`${apptDate}T${apptTime}`).toISOString()
+    const endNote = apptEndTime ? `End time: ${apptEndTime}` : ''
+    const fullNotes = [endNote, apptNotes].filter(Boolean).join(' | ')
     await supabase.from('lead_appointments').insert([{
       lead_id: selectedLead.id,
       appointment_type: apptType,
       appointment_date: dateTime,
-      notes: apptNotes || null,
+      notes: fullNotes || null,
       created_by: currentUser,
     }])
     // Auto-update lead status to appointment_set
     await supabase.from('leads').update({ status: 'appointment_set' }).eq('id', selectedLead.id)
-    setApptType(''); setApptDate(''); setApptTime(''); setApptNotes('')
+    setApptType(''); setApptDate(''); setApptTime(''); setApptEndTime(''); setApptNotes('')
     setShowSchedule(false)
     setSavingAppt(false)
     loadAppointments(selectedLead.id)
@@ -223,7 +226,7 @@ export default function LeadModal({
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setSelectedLead(null)}>
       <div
         className="md:rounded-[20px] md:max-w-[480px] md:m-4"
-        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)' }}
+        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)', animation: 'slideUp 0.25s ease-out' }}
         onClick={(e) => e.stopPropagation()}>
 
         {/* Mobile drag handle */}
@@ -381,31 +384,45 @@ export default function LeadModal({
 
           {/* Schedule Appointment form */}
           {showSchedule && (
-            <div style={{ background: '#f9f9f9', borderRadius: 14, padding: '14px', marginBottom: 16, border: '0.5px solid #e8e8e8' }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', margin: '0 0 12px' }}>New Appointment</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <select value={apptType} onChange={(e) => setApptType(e.target.value)} style={{ ...inputStyle, padding: '8px 12px', color: apptType ? '#1a1a2e' : '#aaa' }}>
-                  <option value="">— Appointment Type —</option>
-                  {APPOINTMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
+            <div style={{ background: 'white', borderRadius: 14, padding: '16px', marginBottom: 16, border: '1px solid #e0e0e0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', margin: '0 0 14px' }}>New Appointment</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Appointment Type</label>
+                  <select value={apptType} onChange={(e) => setApptType(e.target.value)}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptType ? '#1a1a2e' : '#888' }}>
+                    <option value="">— Select type —</option>
+                    {APPOINTMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Date</label>
+                  <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptDate ? '#1a1a2e' : '#888' }} />
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div>
-                    <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Date</label>
-                    <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)} style={{ ...inputStyle }} />
+                    <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Start Time</label>
+                    <input type="time" value={apptTime} onChange={(e) => setApptTime(e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptTime ? '#1a1a2e' : '#888' }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Time</label>
-                    <input type="time" value={apptTime} onChange={(e) => setApptTime(e.target.value)} style={{ ...inputStyle }} />
+                    <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>End Time</label>
+                    <input type="time" value={apptEndTime} onChange={(e) => setApptEndTime(e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptEndTime ? '#1a1a2e' : '#888' }} />
                   </div>
                 </div>
-                <textarea placeholder="Notes (optional)" value={apptNotes} onChange={(e) => setApptNotes(e.target.value)} rows={2}
-                  style={{ ...inputStyle, resize: 'none', lineHeight: 1.5 }} />
+                <div>
+                  <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Notes (optional)</label>
+                  <textarea placeholder="Any notes about this appointment…" value={apptNotes} onChange={(e) => setApptNotes(e.target.value)} rows={2}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', resize: 'none', lineHeight: 1.5 }} />
+                </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={scheduleAppointment} disabled={!apptType || !apptDate || !apptTime || savingAppt}
-                    style={{ flex: 1, padding: '9px', borderRadius: 10, background: apptType && apptDate && apptTime ? '#185FA5' : '#f0f0f0', color: apptType && apptDate && apptTime ? 'white' : '#bbb', fontWeight: 500, fontSize: 13, border: 'none', cursor: apptType && apptDate && apptTime ? 'pointer' : 'not-allowed' }}>
+                    style={{ flex: 1, padding: '12px', borderRadius: 10, background: apptType && apptDate && apptTime ? '#185FA5' : '#f0f0f0', color: apptType && apptDate && apptTime ? 'white' : '#bbb', fontWeight: 600, fontSize: 14, border: 'none', cursor: apptType && apptDate && apptTime ? 'pointer' : 'not-allowed' }}>
                     {savingAppt ? 'Saving…' : 'Save Appointment'}
                   </button>
-                  <button onClick={() => setShowSchedule(false)} style={{ padding: '9px 14px', borderRadius: 10, background: 'white', color: '#888', fontSize: 13, border: '0.5px solid #e5e5e5', cursor: 'pointer' }}>
+                  <button onClick={() => setShowSchedule(false)} style={{ padding: '12px 16px', borderRadius: 10, background: '#f5f5f5', color: '#555', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
                     Cancel
                   </button>
                 </div>
@@ -539,4 +556,26 @@ export default function LeadModal({
       </div>
     </div>
   )
+}
+
+// Add slide-up animation via global style injection
+if (typeof document !== 'undefined') {
+  const styleId = 'lead-modal-animation'
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = `
+      @keyframes slideUp {
+        from { transform: translateY(100%); opacity: 0.8; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @media (min-width: 768px) {
+        @keyframes slideUp {
+          from { transform: scale(0.96); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+      }
+    `
+    document.head.appendChild(style)
+  }
 }
