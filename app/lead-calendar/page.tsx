@@ -100,20 +100,21 @@ export default function LeadCalendarPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* Top bar */}
-          <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Lead Calendar</h1>
-              {/* Mobile view toggle */}
-              <div className="md:hidden flex" style={{ border: '0.5px solid #e5e5e5', borderRadius: 8, overflow: 'hidden' }}>
-                <button onClick={() => setMobileView('list')} style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: mobileView === 'list' ? '#185FA5' : 'white', color: mobileView === 'list' ? 'white' : '#666' }}>List</button>
-                <button onClick={() => setMobileView('calendar')} style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: mobileView === 'calendar' ? '#185FA5' : 'white', color: mobileView === 'calendar' ? 'white' : '#666' }}>Calendar</button>
+          <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '12px 16px' }}>
+            {/* Row 1: title + month nav */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Lead Calendar</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button onClick={prevMonth} style={{ width: 32, height: 32, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 18, color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', minWidth: 110, textAlign: 'center' }}>{monthName}</span>
+                <button onClick={nextMonth} style={{ width: 32, height: 32, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 18, color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                <button onClick={() => { setViewMonth(today.getMonth()); setViewYear(today.getFullYear()) }} style={{ padding: '5px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 12, color: '#555' }}>Today</button>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button onClick={prevMonth} style={{ width: 28, height: 28, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 16, color: '#555' }}>‹</button>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', minWidth: 120, textAlign: 'center' }}>{monthName}</span>
-              <button onClick={nextMonth} style={{ width: 28, height: 28, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 16, color: '#555' }}>›</button>
-              <button onClick={() => { setViewMonth(today.getMonth()); setViewYear(today.getFullYear()) }} style={{ padding: '5px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 12, color: '#555' }}>Today</button>
+            {/* Row 2: mobile view toggle */}
+            <div className="md:hidden flex" style={{ border: '0.5px solid #e5e5e5', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
+              <button onClick={() => setMobileView('list')} style={{ padding: '6px 20px', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: mobileView === 'list' ? '#185FA5' : 'white', color: mobileView === 'list' ? 'white' : '#666' }}>List</button>
+              <button onClick={() => setMobileView('calendar')} style={{ padding: '6px 20px', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: mobileView === 'calendar' ? '#185FA5' : 'white', color: mobileView === 'calendar' ? 'white' : '#666' }}>Calendar</button>
             </div>
           </div>
 
