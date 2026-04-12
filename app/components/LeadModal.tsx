@@ -363,7 +363,7 @@ export default function LeadModal({
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <button onClick={createProposal} style={{ flex: 1, padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 13, border: 'none', cursor: 'pointer' }}>
+            <button className="hidden md:block" onClick={createProposal} style={{ flex: 1, padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 13, border: 'none', cursor: 'pointer' }}>
               + Create Proposal
             </button>
             <button onClick={() => setShowSchedule(!showSchedule)} style={{ flex: 1, padding: '10px', borderRadius: 12, background: showSchedule ? '#FAEEDA' : '#f9f9f9', color: showSchedule ? '#633806' : '#555', fontWeight: 500, fontSize: 13, border: '0.5px solid #e5e5e5', cursor: 'pointer' }}>
