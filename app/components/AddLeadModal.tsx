@@ -17,32 +17,7 @@ function formatPhone(raw: string): string {
 }
 
 declare global {
-  interface Window { google: any }
-}
-
-function loadGoogleMapsScript(apiKey: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.google?.maps?.places?.PlaceAutocompleteElement) { resolve(); return }
-    if (document.getElementById('google-maps-script')) {
-      const interval = setInterval(() => {
-        if (window.google?.maps?.places?.PlaceAutocompleteElement) { clearInterval(interval); resolve() }
-      }, 100)
-      setTimeout(() => { clearInterval(interval); reject(new Error('Timeout')) }, 10000)
-      return
-    }
-    const script = document.createElement('script')
-    script.id = 'google-maps-script'
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&v=weekly`
-    script.async = true
-    script.onload = () => {
-      const interval = setInterval(() => {
-        if (window.google?.maps?.places?.PlaceAutocompleteElement) { clearInterval(interval); resolve() }
-      }, 100)
-      setTimeout(() => { clearInterval(interval); resolve() }, 3000)
-    }
-    script.onerror = () => reject(new Error('Script load failed'))
-    document.head.appendChild(script)
-  })
+  interface Window { google: any; initGooglePlaces: () => void }
 }
 
 export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
@@ -57,10 +32,9 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
   const [service, setService] = useState('')
   const [source, setSource] = useState('')
   const [saving, setSaving] = useState(false)
-  const [placesReady, setPlacesReady] = useState(false)
 
-  const containerRef = useRef<HTMLDivElement>(null)
   const addressInputRef = useRef<HTMLInputElement>(null)
+  const autocompleteRef = useRef<any>(null)
 
   const inputStyle = {
     width: '100%', boxSizing: 'border-box' as const,
@@ -71,45 +45,67 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-    if (!apiKey) return
+    if (!apiKey || !addressInputRef.current) return
 
-    loadGoogleMapsScript(apiKey).then(() => {
-      if (!containerRef.current) return
-      if (!window.google?.maps?.places?.PlaceAutocompleteElement) return
-
+    function initAutocomplete() {
+      if (!window.google?.maps?.places || !addressInputRef.current) return
       try {
-        const el = new window.google.maps.places.PlaceAutocompleteElement({
-          componentRestrictions: { country: 'us' },
-          types: ['address'],
-        })
-        el.style.width = '100%'
-        containerRef.current.innerHTML = ''
-        containerRef.current.appendChild(el)
-        setPlacesReady(true)
-
-        el.addEventListener('gmp-placeselect', async (e: any) => {
-          try {
-            const place = e.placePrediction.toPlace()
-            await place.fetchFields({ fields: ['formattedAddress'] })
-            setAddress(place.formattedAddress || '')
-            // Scroll modal back into view after selection
-            containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-          } catch { /* fallback */ }
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(
+          addressInputRef.current,
+          { componentRestrictions: { country: 'us' }, types: ['address'], fields: ['formatted_address'] }
+        )
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current.getPlace()
+          if (place?.formatted_address) {
+            setAddress(place.formatted_address)
+          }
         })
       } catch (err) {
-        console.error('PlaceAutocompleteElement error:', err)
+        console.error('Autocomplete error:', err)
       }
-    }).catch(console.error)
+    }
+
+    if (window.google?.maps?.places) {
+      initAutocomplete()
+    } else {
+      // Load script if not already loaded
+      const existingScript = document.getElementById('google-maps-script')
+      if (!existingScript) {
+        window.initGooglePlaces = initAutocomplete
+        const script = document.createElement('script')
+        script.id = 'google-maps-script'
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces`
+        script.async = true
+        script.defer = true
+        document.head.appendChild(script)
+      } else {
+        // Script already loading — poll for ready
+        const interval = setInterval(() => {
+          if (window.google?.maps?.places) {
+            clearInterval(interval)
+            initAutocomplete()
+          }
+        }, 100)
+        setTimeout(() => clearInterval(interval), 10000)
+      }
+    }
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
     setSaving(true)
+
+    // If user typed something in address field but didn't pick from dropdown, use what they typed
+    const finalAddress = address || addressInputRef.current?.value || ''
+
     await supabase.from('leads').insert([{
-      name: name.trim(), email: email.trim() || null,
-      phone: phone || null, address: address.trim() || null,
-      service: service || null, source: source || null,
+      name: name.trim(),
+      email: email.trim() || null,
+      phone: phone || null,
+      address: finalAddress.trim() || null,
+      service: service || null,
+      source: source || null,
       status: 'uncontacted',
     }])
     setSaving(false)
@@ -117,12 +113,12 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
       <div
-        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)', WebkitOverflowScrolling: 'touch' }}
+        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)' }}
         className="md:rounded-[20px] md:max-w-[460px] md:m-4 md:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
       >
         {/* Handle bar for mobile */}
         <div className="md:hidden sticky top-0 bg-white pt-3 pb-1 z-10">
@@ -137,7 +133,7 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '0 24px 40px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
 
             <div>
               <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Full Name *</label>
@@ -155,32 +151,15 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
               </div>
             </div>
 
-            {/* Address — Google PlaceAutocompleteElement or plain fallback */}
-            <div onFocus={() => {
-              // Small delay to let keyboard open, then scroll this field into view
-              setTimeout(() => {
-                containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              }, 300)
-            }}>
+            <div>
               <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Address</label>
-              {/* Google Places mounts here */}
-              <div ref={containerRef} style={{ width: '100%', minHeight: placesReady ? 42 : 0 }} />
-              {/* Plain input shown until Places loads */}
-              {!placesReady && (
-                <input
-                  ref={addressInputRef}
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Start typing an address…"
-                  style={inputStyle}
-                />
-              )}
-              {/* Keep address value in sync if user typed manually */}
-              {placesReady && address && (
-                <p style={{ fontSize: 11, color: '#27500A', margin: '4px 0 0', background: '#EAF3DE', padding: '4px 8px', borderRadius: 6 }}>
-                  ✓ {address}
-                </p>
-              )}
+              <input
+                ref={addressInputRef}
+                type="text"
+                placeholder="Start typing an address…"
+                onChange={(e) => setAddress(e.target.value)}
+                style={inputStyle}
+              />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
