@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import NavSidebar from '../components/NavSidebar'
+import MobileHeader from '../components/MobileHeader'
 
 const PRESET_COLORS = [
   '#185FA5', '#0F6E56', '#8B3FC8', '#C0392B', '#D4810A',
@@ -406,9 +407,7 @@ export default function ProjectsPage() {
         {mobileView === 'list' ? (
           <>
             {/* Header */}
-            <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Projects</h1>
-            </div>
+            <MobileHeader title="Projects" />
             {/* Active project cards */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 100px' }}>
               {activeProjects.length === 0 && <p style={{ textAlign: 'center', color: '#bbb', fontSize: 14, marginTop: 32 }}>No active projects.</p>}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import NavSidebar from '../components/NavSidebar'
+import MobileHeader from '../components/MobileHeader'
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16)
@@ -131,7 +132,8 @@ export default function CalendarPage() {
           {/* Top bar */}
           <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '12px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Production Calendar</h1>
+              <h1 className="hidden md:block" style={{ fontSize: 18, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Production Calendar</h1>
+              <MobileHeader title="Production Calendar" />
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <button onClick={prevMonth} style={{ width: 32, height: 32, borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'white', cursor: 'pointer', fontSize: 18, color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', minWidth: 100, textAlign: 'center' }}>{monthName}</span>

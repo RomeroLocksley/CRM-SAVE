@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import LeadModal from '../components/LeadModal'
 import NavSidebar from '../components/NavSidebar'
 import AddLeadModal from '../components/AddLeadModal'
+import MobileHeader from '../components/MobileHeader'
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   uncontacted:      { bg: '#f5f5f5',  text: '#888',    label: 'Uncontacted' },
@@ -100,11 +101,15 @@ export default function LeadsPage() {
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* Top bar */}
-          <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-8 py-4" style={{ background: 'white', borderBottom: '0.5px solid #eee' }}>
+          {/* Mobile header */}
+          <MobileHeader title="Leads" rightAction={
+            <button onClick={() => setShowAddLead(true)} style={{ background: '#185FA5', color: 'white', border: 'none', padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>+ Add</button>
+          } />
+          {/* Desktop header */}
+          <div className="hidden md:flex flex-shrink-0 items-center justify-between px-8 py-4" style={{ background: 'white', borderBottom: '0.5px solid #eee' }}>
             <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Leads</h1>
-            <button onClick={() => setShowAddLead(true)} style={{ background: '#185FA5', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-              + Add
+            <button onClick={() => setShowAddLead(true)} style={{ background: '#185FA5', color: 'white', border: 'none', padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              + Add Lead
             </button>
           </div>
 

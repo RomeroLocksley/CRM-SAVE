@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import NavSidebar from './components/NavSidebar'
+import MobileHeader from './components/MobileHeader'
 
 const MARKUP = 1.5 * 1.05
 
@@ -69,7 +70,8 @@ export default function Dashboard() {
         <NavSidebar />
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div style={{ flexShrink: 0, padding: '16px 16px 16px 16px', background: 'white', borderBottom: '0.5px solid #eee' }}>
+          <MobileHeader title="Dashboard" />
+          <div className="hidden md:block flex-shrink-0" style={{ padding: '16px 32px', background: 'white', borderBottom: '0.5px solid #eee' }}>
             <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Dashboard</h1>
           </div>
 
