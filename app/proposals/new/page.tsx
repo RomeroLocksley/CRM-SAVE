@@ -920,7 +920,7 @@ function ProposalBuilder() {
       {/* ── ADD ITEM MODAL ───────────────────────────────────────────────────── */}
       {showAddItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAddItem(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col" style={{ maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <p className="text-base font-semibold text-gray-800">
@@ -977,22 +977,24 @@ function ProposalBuilder() {
 
             {/* Step 3 — pick which proposal section to add to */}
             {!showCustomItem && addItemStep === 3 && selectedCatalogItem && (
-              <div className="p-6">
-                <p className="text-sm text-gray-600 mb-1">Adding: <strong>{selectedCatalogItem.name}</strong></p>
-                <p className="text-sm text-gray-600 mb-4">Which proposal section should it go into?</p>
-                {sections.length === 0 ? (
-                  <p className="text-sm text-gray-400">No sections in this proposal yet. Add a section first.</p>
-                ) : (
-                  <div className="flex flex-col gap-2 mb-6">
-                    {sections.map((s) => (
-                      <button key={s.id} onClick={() => setTargetProposalSectionId(s.id)}
-                        className={`text-left px-4 py-3 rounded-xl border transition-colors ${targetProposalSectionId === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300 text-gray-700'}`}>
-                        <p className="text-sm font-medium">{s.name}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-3">
+              <div className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-6 pb-2">
+                  <p className="text-sm text-gray-600 mb-1">Adding: <strong>{selectedCatalogItem.name}</strong></p>
+                  <p className="text-sm text-gray-600 mb-4">Which proposal section should it go into?</p>
+                  {sections.length === 0 ? (
+                    <p className="text-sm text-gray-400">No sections in this proposal yet. Add a section first.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {sections.map((s) => (
+                        <button key={s.id} onClick={() => setTargetProposalSectionId(s.id)}
+                          className={`text-left px-4 py-3 rounded-xl border transition-colors ${targetProposalSectionId === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300 text-gray-700'}`}>
+                          <p className="text-sm font-medium">{s.name}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 p-6 pt-4 border-t border-gray-100 flex-shrink-0">
                   <button onClick={() => setAddItemStep(2)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
                     ← Back
                   </button>
