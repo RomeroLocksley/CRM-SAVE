@@ -77,6 +77,8 @@ export default function LeadModal({
 }: any) {
   const [editing, setEditing] = useState(false)
   const [currentUser, setCurrentUser] = useState('Unknown')
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [contactLog, setContactLog] = useState<any[]>([])
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editPhone, setEditPhone] = useState('')
@@ -96,8 +98,12 @@ export default function LeadModal({
   const [savingAppt, setSavingAppt] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setCurrentUser(user.user_metadata?.full_name || user.email || 'Unknown')
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        setCurrentUser(user.user_metadata?.full_name || user.email || 'Unknown')
+        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        setIsAdmin(data?.role === 'admin')
+      }
     })
   }, [])
 
@@ -114,12 +120,27 @@ export default function LeadModal({
       setEditing(false)
       setShowSchedule(false)
       loadAppointments(selectedLead.id)
+      loadContactLog(selectedLead.id)
     }
   }, [selectedLead])
 
   async function loadAppointments(leadId: string) {
     const { data } = await supabase.from('lead_appointments').select('*').eq('lead_id', leadId).order('appointment_date', { ascending: true })
     setAppointments(data || [])
+  }
+
+  async function loadContactLog(leadId: string) {
+    const { data } = await supabase.from('lead_contact_log').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
+    setContactLog(data || [])
+  }
+
+  async function logContact(type: string) {
+    await supabase.from('lead_contact_log').insert([{
+      lead_id: selectedLead.id,
+      contact_type: type,
+      contacted_by: currentUser,
+    }])
+    loadContactLog(selectedLead.id)
   }
 
   if (!selectedLead) return null
@@ -290,18 +311,52 @@ export default function LeadModal({
               </button>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-              <div style={{ background: '#f9f9f9', borderRadius: 12, padding: '10px 12px' }}>
-                <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>Email</p>
-                <p style={{ fontSize: 13, color: '#333', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.email || '—'}</p>
-              </div>
-              <div style={{ background: '#f9f9f9', borderRadius: 12, padding: '10px 12px' }}>
-                <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>Phone</p>
-                <p style={{ fontSize: 13, color: '#333', margin: 0 }}>{selectedLead.phone || '—'}</p>
-              </div>
-              <div style={{ background: '#f9f9f9', borderRadius: 12, padding: '10px 12px', gridColumn: '1 / -1' }}>
-                <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>Address</p>
-                <p style={{ fontSize: 13, color: '#333', margin: 0 }}>{selectedLead.address || '—'}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {/* Mobile: tap-to-call/text/email action buttons */}
+              {(selectedLead.phone || selectedLead.email) && (
+                <div className="md:hidden" style={{ display: 'grid', gridTemplateColumns: selectedLead.phone && selectedLead.email ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 8 }}>
+                  {selectedLead.phone && (
+                    <a href={`tel:${selectedLead.phone}`} onClick={() => logContact('Call')} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: '#E6F1FB', borderRadius: 12, padding: '12px 8px', cursor: 'pointer' }}>
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M4 2a1 1 0 0 0-1 1v1.5c0 7.456 6.044 13.5 13.5 13.5H18a1 1 0 0 0 1-1v-3a1 1 0 0 0-.684-.949l-3-1a1 1 0 0 0-1.084.3l-1.2 1.44a11.06 11.06 0 0 1-5.323-5.323l1.44-1.2a1 1 0 0 0 .3-1.084l-1-3A1 1 0 0 0 7.5 2H4z" fill="#185FA5"/>
+                      </svg>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#185FA5' }}>Call</span>
+                    </a>
+                  )}
+                  {selectedLead.phone && (
+                    <a href={`sms:${selectedLead.phone}`} onClick={() => logContact('Text')} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: '#EAF3DE', borderRadius: 12, padding: '12px 8px', cursor: 'pointer' }}>
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 3a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5l-4 4V3z" fill="#27500A"/>
+                      </svg>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#27500A' }}>Text</span>
+                    </a>
+                  )}
+                  {selectedLead.email && (
+                    <a href={`mailto:${selectedLead.email}`} onClick={() => logContact('Email')} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: '#FEF3C7', borderRadius: 12, padding: '12px 8px', cursor: 'pointer' }}>
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4z" fill="#78350F" opacity="0.15"/>
+                        <path d="M2 4l8 7 8-7" stroke="#78350F" strokeWidth="1.5" strokeLinecap="round"/>
+                        <rect x="2" y="4" width="16" height="12" rx="1" stroke="#78350F" strokeWidth="1.5"/>
+                      </svg>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#78350F' }}>Email</span>
+                    </a>
+                  )}
+                </div>
+              )}
+              {/* Desktop and mobile: info tiles */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ background: '#f9f9f9', borderRadius: 12, padding: '10px 12px' }}>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>Email</p>
+                  <p style={{ fontSize: 13, color: '#333', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.email || '—'}</p>
+                </div>
+                <div style={{ background: '#f9f9f9', borderRadius: 12, padding: '10px 12px' }}>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>Phone</p>
+                  <p style={{ fontSize: 13, color: '#333', margin: 0 }}>{selectedLead.phone || '—'}</p>
+                </div>
+                <div style={{ background: '#f9f9f9', borderRadius: 12, padding: '10px 12px', gridColumn: '1 / -1' }}>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 2px' }}>Address</p>
+                  <p style={{ fontSize: 13, color: '#333', margin: 0 }}>{selectedLead.address || '—'}</p>
+                </div>
               </div>
             </div>
           )}
@@ -437,6 +492,41 @@ export default function LeadModal({
               </div>
             )}
           </div>
+          {/* Admin-only contact log */}
+          {isAdmin && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ borderTop: '0.5px solid #f0f0f0', marginBottom: 16 }} />
+              <p style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>
+                Contact Log <span style={{ fontSize: 10, background: '#f0f0f0', color: '#888', padding: '1px 6px', borderRadius: 20, marginLeft: 4 }}>Admin</span>
+              </p>
+              {contactLog.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#bbb' }}>No contacts logged yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {contactLog.map((log) => {
+                    const typeColors: Record<string, { bg: string; text: string }> = {
+                      Call:  { bg: '#E6F1FB', text: '#0C447C' },
+                      Text:  { bg: '#EAF3DE', text: '#27500A' },
+                      Email: { bg: '#FEF3C7', text: '#78350F' },
+                    }
+                    const colors = typeColors[log.contact_type] || { bg: '#f5f5f5', text: '#888' }
+                    return (
+                      <div key={log.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#fafafa', borderRadius: 10, border: '0.5px solid #f0f0f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, background: colors.bg, color: colors.text, padding: '2px 8px', borderRadius: 20 }}>{log.contact_type}</span>
+                          <span style={{ fontSize: 12, color: '#555' }}>{log.contacted_by}</span>
+                        </div>
+                        <span style={{ fontSize: 11, color: '#aaa' }}>
+                          {new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </div>
