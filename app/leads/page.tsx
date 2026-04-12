@@ -101,10 +101,7 @@ export default function LeadsPage() {
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* Mobile header */}
-          <MobileHeader title="Leads" rightAction={
-            <button onClick={() => setShowAddLead(true)} style={{ background: '#185FA5', color: 'white', border: 'none', padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>+ Add</button>
-          } />
+<MobileHeader title="Leads" />
           {/* Desktop header */}
           <div className="hidden md:flex flex-shrink-0 items-center justify-between px-8 py-4" style={{ background: 'white', borderBottom: '0.5px solid #eee' }}>
             <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Leads</h1>
