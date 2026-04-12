@@ -41,7 +41,6 @@ export default function Dashboard() {
   const avgContractPrice = signedProposals.length > 0 ? totalSoldValue / signedProposals.length : 0
   const activeProjects = projects.filter((p) => p.status === 'active').length
 
-  // Loss reasons — exclude working and sold
   const lossReasons: Record<string, number> = {}
   leads.forEach((l) => {
     if (l.result && l.result !== 'sold' && l.result !== 'working') {
@@ -52,7 +51,6 @@ export default function Dashboard() {
   const sources: Record<string, number> = {}
   leads.forEach((l) => { if (l.source) sources[l.source] = (sources[l.source] || 0) + 1 })
 
-  // Always show all 4 statuses
   const statusCounts: Record<string, number> = {
     uncontacted: 0, appointment_set: 0, proposal_sent: 0, needs_reschedule: 0,
   }
@@ -66,106 +64,108 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#f4f7fb' }}>
-      <NavSidebar />
+    <div style={{ background: '#f4f7fb', minHeight: '100vh' }}>
+      <div className="flex h-screen overflow-hidden">
+        <NavSidebar />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div style={{ flexShrink: 0, padding: '16px 32px', background: 'white', borderBottom: '0.5px solid #eee' }}>
-          <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Dashboard</h1>
-        </div>
-
-        <div className="flex-1 overflow-y-auto" style={{ padding: 32 }}>
-
-          {/* Lead KPIs */}
-          <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Leads</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
-            {[
-              { label: 'Total Leads', value: totalLeads, color: '#1a1a2e' },
-              { label: 'Sold', value: soldLeads, color: '#27500A' },
-              { label: 'Lost', value: lostLeads, color: '#A32D2D' },
-              { label: 'Close Rate', value: `${closeRate}%`, color: '#0C447C' },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '20px 24px' }}>
-                <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-                <p style={{ fontSize: 28, fontWeight: 600, margin: 0, color }}>{value}</p>
-              </div>
-            ))}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div style={{ flexShrink: 0, padding: '16px 16px 16px 16px', background: 'white', borderBottom: '0.5px solid #eee' }}>
+            <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Dashboard</h1>
           </div>
 
-          {/* Business KPIs */}
-          <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Business</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
-            {[
-              { label: 'Total Sold Value', value: fmtMoney(totalSoldValue), color: '#27500A', sub: `${signedProposals.length} signed contract${signedProposals.length !== 1 ? 's' : ''}` },
-              { label: 'Avg Contract Price', value: fmtMoney(avgContractPrice), color: '#185FA5', sub: 'Per signed proposal' },
-              { label: 'Active Projects', value: activeProjects, color: '#0F6E56', sub: `${projects.filter(p => p.status === 'completed').length} completed` },
-            ].map(({ label, value, color, sub }) => (
-              <div key={label} style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '20px 24px' }}>
-                <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 8px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-                <p style={{ fontSize: 28, fontWeight: 600, margin: '0 0 4px', color }}>{value}</p>
-                <p style={{ fontSize: 12, color: '#bbb', margin: 0 }}>{sub}</p>
-              </div>
-            ))}
-          </div>
+          <div className="flex-1 overflow-y-auto pb-24 md:pb-8" style={{ padding: '16px' }}>
 
-          {/* Bottom row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-
-            {/* Pipeline — all 4 statuses always shown */}
-            <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '20px 24px' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 16px' }}>Lead Pipeline</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {Object.entries(statusCounts).map(([status, count]) => {
-                  const s = STATUS_COLORS[status]
-                  return (
-                    <div key={status} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 12, background: s.bg, color: s.text, padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>{s.label}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Why deals are lost */}
-            <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '20px 24px' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 16px' }}>Why Deals Are Lost</p>
-              {Object.keys(lossReasons).length === 0 ? (
-                <p style={{ fontSize: 13, color: '#bbb' }}>No data yet</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {Object.entries(lossReasons).map(([reason, count], i, arr) => (
-                    <div key={reason} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
-                      <span style={{ fontSize: 13, color: '#555' }}>{LOSS_REASON_LABELS[reason] || reason}</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{count}</span>
-                    </div>
-                  ))}
+            {/* Lead KPIs — 2 cols on mobile, 4 on desktop */}
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Leads</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 20 }} className="md:grid-cols-4">
+              {[
+                { label: 'Total Leads', value: totalLeads, color: '#1a1a2e' },
+                { label: 'Sold', value: soldLeads, color: '#27500A' },
+                { label: 'Lost', value: lostLeads, color: '#A32D2D' },
+                { label: 'Close Rate', value: `${closeRate}%`, color: '#0C447C' },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '16px' }}>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+                  <p style={{ fontSize: 24, fontWeight: 600, margin: 0, color }}>{value}</p>
                 </div>
-              )}
+              ))}
             </div>
 
-            {/* Lead sources */}
-            <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '20px 24px' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 16px' }}>Lead Sources</p>
-              {Object.keys(sources).length === 0 ? (
-                <p style={{ fontSize: 13, color: '#bbb' }}>No data yet</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {Object.entries(sources).sort((a, b) => b[1] - a[1]).map(([src, count], i, arr) => (
-                    <div key={src} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
-                      <span style={{ fontSize: 13, color: '#555' }}>{src}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 60, height: 4, background: '#f0f0f0', borderRadius: 2, overflow: 'hidden' }}>
-                          <div style={{ width: `${Math.round((count / totalLeads) * 100)}%`, height: '100%', background: '#185FA5', borderRadius: 2 }} />
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', minWidth: 16, textAlign: 'right' }}>{count}</span>
+            {/* Business KPIs — 1 col on mobile, 3 on desktop */}
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>Business</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 10, marginBottom: 20 }} className="md:grid-cols-3">
+              {[
+                { label: 'Total Sold Value', value: fmtMoney(totalSoldValue), color: '#27500A', sub: `${signedProposals.length} signed contract${signedProposals.length !== 1 ? 's' : ''}` },
+                { label: 'Avg Contract Price', value: fmtMoney(avgContractPrice), color: '#185FA5', sub: 'Per signed proposal' },
+                { label: 'Active Projects', value: activeProjects, color: '#0F6E56', sub: `${projects.filter(p => p.status === 'completed').length} completed` },
+              ].map(({ label, value, color, sub }) => (
+                <div key={label} style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '16px' }}>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: '0 0 6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+                  <p style={{ fontSize: 24, fontWeight: 600, margin: '0 0 4px', color }}>{value}</p>
+                  <p style={{ fontSize: 12, color: '#bbb', margin: 0 }}>{sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom cards — stack on mobile */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }} className="md:grid-cols-3">
+
+              {/* Pipeline */}
+              <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '16px 20px' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 14px' }}>Lead Pipeline</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {Object.entries(statusCounts).map(([status, count]) => {
+                    const s = STATUS_COLORS[status]
+                    return (
+                      <div key={status} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, background: s.bg, color: s.text, padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>{s.label}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>{count}</span>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
-              )}
-            </div>
+              </div>
 
+              {/* Why deals are lost */}
+              <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '16px 20px' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 14px' }}>Why Deals Are Lost</p>
+                {Object.keys(lossReasons).length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#bbb' }}>No data yet</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {Object.entries(lossReasons).map(([reason, count], i, arr) => (
+                      <div key={reason} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
+                        <span style={{ fontSize: 13, color: '#555' }}>{LOSS_REASON_LABELS[reason] || reason}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Lead sources */}
+              <div style={{ background: 'white', borderRadius: 14, border: '0.5px solid #e8e8e8', padding: '16px 20px' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 14px' }}>Lead Sources</p>
+                {Object.keys(sources).length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#bbb' }}>No data yet</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {Object.entries(sources).sort((a, b) => b[1] - a[1]).map(([src, count], i, arr) => (
+                      <div key={src} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
+                        <span style={{ fontSize: 13, color: '#555' }}>{src}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 60, height: 4, background: '#f0f0f0', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.round((count / totalLeads) * 100)}%`, height: '100%', background: '#185FA5', borderRadius: 2 }} />
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', minWidth: 16, textAlign: 'right' }}>{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
