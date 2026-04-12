@@ -3,7 +3,6 @@
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
 import NavSidebar from '../../components/NavSidebar'
 
 type CostRow = {
@@ -71,7 +70,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
   useEffect(() => {
     async function load() {
       setLoading(true)
-
       const { data: proposal } = await supabase
         .from('proposals')
         .select('title, terms_and_conditions, leads(name, phone, address)')
@@ -84,21 +82,15 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
       }
       setTc(proposal?.terms_and_conditions || '')
 
-      const { data: sectionsData } = await supabase
-        .from('proposal_sections').select('*').eq('proposal_id', proposalId).order('created_at', { ascending: true })
-      const { data: itemsData } = await supabase
-        .from('proposal_items').select('*').eq('proposal_id', proposalId)
-      const { data: rowsData } = await supabase
-        .from('proposal_item_rows').select('*').eq('proposal_id', proposalId)
+      const { data: sectionsData } = await supabase.from('proposal_sections').select('*').eq('proposal_id', proposalId).order('created_at', { ascending: true })
+      const { data: itemsData } = await supabase.from('proposal_items').select('*').eq('proposal_id', proposalId)
+      const { data: rowsData } = await supabase.from('proposal_item_rows').select('*').eq('proposal_id', proposalId)
 
       const structured: ProposalSection[] = (sectionsData || []).map((section) => ({
         ...section,
         items: (itemsData || [])
           .filter((item) => item.section_id === section.id)
-          .map((item) => ({
-            ...item,
-            rows: (rowsData || []).filter((row) => row.item_id === item.id),
-          })),
+          .map((item) => ({ ...item, rows: (rowsData || []).filter((row) => row.item_id === item.id) })),
       }))
 
       setSections(structured)
@@ -120,16 +112,12 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
   return (
     <>
       <div className="flex justify-end px-10 pt-6 print:hidden">
-        <button
-          onClick={() => window.print()}
-          className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
-        >
+        <button onClick={() => window.print()} className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
           Print / Save as PDF
         </button>
       </div>
 
       <div id="proposal-preview" className="bg-white mx-auto my-6 p-12 shadow-lg print:shadow-none print:my-0 print:p-8" style={{ maxWidth: '850px' }}>
-
         <div className="flex items-center justify-center mb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.jpg" alt="K&D Contracting" className="w-16 h-16 mr-4 object-contain" />
@@ -172,7 +160,6 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
           const sectionTotal = section.items.reduce((sum, item) =>
             sum + item.rows.reduce((rSum, row) =>
               rSum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0), 0) * MARKUP
-
           return (
             <div key={section.id} className="mb-8">
               <h2 className="text-sm font-bold text-[#1a3a5c] uppercase mb-2">{section.name}</h2>
@@ -195,9 +182,7 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#e8f0f7]">
-                    <td colSpan={2} className="px-3 py-2 font-bold text-[#1a3a5c] border border-gray-200">
-                      {section.name.toUpperCase()} Total:
-                    </td>
+                    <td colSpan={2} className="px-3 py-2 font-bold text-[#1a3a5c] border border-gray-200">{section.name.toUpperCase()} Total:</td>
                     <td className="px-3 py-2 font-bold text-[#1a3a5c] text-right border border-gray-200">
                       ${sectionTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
@@ -219,31 +204,17 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
 
         <div className="text-xs text-gray-700 leading-relaxed">
           <p className="font-bold text-sm text-[#1a3a5c] mb-4">Terms and Conditions</p>
-          {tc ? (
-            <div className="whitespace-pre-wrap">{tc}</div>
-          ) : (
-            <p className="text-gray-400 italic">No terms and conditions set for this proposal.</p>
-          )}
+          {tc ? <div className="whitespace-pre-wrap">{tc}</div> : <p className="text-gray-400 italic">No terms and conditions set.</p>}
         </div>
 
         <div className="mt-10 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-600 mb-6">I confirm that my action here represents my electronic signature and is binding.</p>
           <div className="grid grid-cols-2 gap-8">
-            <div>
-              <div className="border-b border-gray-400 mb-1 h-8"></div>
-              <p className="text-xs text-gray-500">Signature</p>
-            </div>
-            <div>
-              <div className="border-b border-gray-400 mb-1 h-8"></div>
-              <p className="text-xs text-gray-500">Date</p>
-            </div>
-            <div>
-              <div className="border-b border-gray-400 mb-1 h-8"></div>
-              <p className="text-xs text-gray-500">Print Name</p>
-            </div>
+            <div><div className="border-b border-gray-400 mb-1 h-8"></div><p className="text-xs text-gray-500">Signature</p></div>
+            <div><div className="border-b border-gray-400 mb-1 h-8"></div><p className="text-xs text-gray-500">Date</p></div>
+            <div><div className="border-b border-gray-400 mb-1 h-8"></div><p className="text-xs text-gray-500">Print Name</p></div>
           </div>
         </div>
-
       </div>
 
       <style>{`
@@ -273,7 +244,6 @@ function ProposalBuilder() {
   const [isSending, setIsSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendSuccess, setSendSuccess] = useState(false)
-
   const [templates, setTemplates] = useState<Template[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false)
@@ -281,175 +251,86 @@ function ProposalBuilder() {
 
   async function loadProposal() {
     if (!proposalId) return
+    const { data: proposalData } = await supabase.from('proposals').select('title, status').eq('id', proposalId).single()
+    if (proposalData) { setProposalTitle(proposalData.title || 'New Proposal'); setProposalStatus(proposalData.status || 'draft') }
 
-    const { data: proposalData } = await supabase
-      .from('proposals')
-      .select('title, status')
-      .eq('id', proposalId)
-      .single()
-
-    if (proposalData) {
-      setProposalTitle(proposalData.title || 'New Proposal')
-      setProposalStatus(proposalData.status || 'draft')
-    }
-
-    const { data: sectionsData } = await supabase
-      .from('proposal_sections').select('*').eq('proposal_id', proposalId).order('created_at', { ascending: true })
-    const { data: itemsData } = await supabase
-      .from('proposal_items').select('*').eq('proposal_id', proposalId)
-    const { data: rowsData } = await supabase
-      .from('proposal_item_rows').select('*').eq('proposal_id', proposalId)
+    const { data: sectionsData } = await supabase.from('proposal_sections').select('*').eq('proposal_id', proposalId).order('created_at', { ascending: true })
+    const { data: itemsData } = await supabase.from('proposal_items').select('*').eq('proposal_id', proposalId)
+    const { data: rowsData } = await supabase.from('proposal_item_rows').select('*').eq('proposal_id', proposalId)
 
     const structured: ProposalSection[] = (sectionsData || []).map((section) => ({
       ...section,
       items: (itemsData || [])
         .filter((item) => item.section_id === section.id)
-        .map((item) => ({
-          ...item,
-          rows: (rowsData || []).filter((row) => row.item_id === item.id),
-        })),
+        .map((item) => ({ ...item, rows: (rowsData || []).filter((row) => row.item_id === item.id) })),
     }))
-
     setSections(structured)
     setIsDirty(false)
     setSaveStatus('saved')
   }
 
   async function loadTemplates() {
-    const { data, error } = await supabase
-      .from('templates').select('id, name, description').order('created_at', { ascending: true })
-    if (error) { console.error(error); return }
+    const { data } = await supabase.from('templates').select('id, name, description').order('created_at', { ascending: true })
     setTemplates(data || [])
   }
 
-  useEffect(() => {
-    loadProposal()
-    loadTemplates()
-  }, [proposalId])
+  useEffect(() => { loadProposal(); loadTemplates() }, [proposalId])
 
-  async function sendForSignature() {
-    if (!proposalId || isSending) return
-    if (isDirty) { alert('Please save the proposal before sending for signature.'); return }
-    const confirmed = window.confirm('This will send the proposal to the client for electronic signature. Continue?')
-    if (!confirmed) return
+  // ─── Add / Delete helpers ──────────────────────────────────────────────────
 
-    setIsSending(true); setSendError(null); setSendSuccess(false)
-    try {
-      const res = await fetch('/api/send-for-signature', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proposalId }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setSendError(data.error || 'Failed to send for signature.'); return }
-      setSendSuccess(true)
-      setProposalStatus('sent')
-      // Auto-update the linked lead's status to proposal_sent
-      const { data: proposalData } = await supabase
-        .from('proposals').select('lead_id').eq('id', proposalId).single()
-      if (proposalData?.lead_id) {
-        await supabase.from('leads').update({ status: 'proposal_sent' }).eq('id', proposalData.lead_id)
-      }
-    } catch (err: any) {
-      setSendError(err.message || 'Something went wrong.')
-    } finally {
-      setIsSending(false)
+  function addSection() {
+    const newSection: ProposalSection = {
+      id: crypto.randomUUID(), proposal_id: proposalId!, name: 'New Section', items: []
     }
+    setSections((prev) => [...prev, newSection])
+    markDirty()
   }
 
-  async function handleLoadTemplate() {
-    if (!selectedTemplateId || !proposalId) return
-    const confirmReplace = sections.length > 0
-      ? window.confirm('This will replace all existing content in this proposal. Continue?')
-      : true
-    if (!confirmReplace) return
+  function deleteSection(sectionId: string) {
+    if (!window.confirm('Delete this section and all its items?')) return
+    setSections((prev) => prev.filter((s) => s.id !== sectionId))
+    markDirty()
+  }
 
-    setIsLoadingTemplate(true); setTemplateError(null)
-    try {
-      const { data: templateData } = await supabase
-        .from('templates').select('terms_and_conditions').eq('id', selectedTemplateId).single()
-
-      const { data: tSections, error: tsErr } = await supabase
-        .from('template_sections').select('*').eq('template_id', selectedTemplateId).order('sort_order', { ascending: true })
-      if (tsErr) throw tsErr
-      if (!tSections || tSections.length === 0) throw new Error('No sections found in this template.')
-
-      const tSectionIds = tSections.map((s: any) => s.id)
-      const { data: tItems, error: tiErr } = await supabase
-        .from('template_items').select('*').in('section_id', tSectionIds).order('sort_order', { ascending: true })
-      if (tiErr) throw tiErr
-
-      const catalogItemIds = (tItems || []).map((i: any) => i.catalog_item_id).filter(Boolean)
-      const { data: catalogItems, error: ciErr } = catalogItemIds.length > 0
-        ? await supabase.from('catalog_items').select('*').in('id', catalogItemIds)
-        : { data: [], error: null }
-      if (ciErr) throw ciErr
-
-      const tItemIds = (tItems || []).map((i: any) => i.id)
-      const { data: tRows, error: trErr } = tItemIds.length > 0
-        ? await supabase.from('template_item_rows').select('*').in('item_id', tItemIds).order('sort_order', { ascending: true })
-        : { data: [], error: null }
-      if (trErr) throw trErr
-
-      const catalogCostRowIds = (tRows || []).map((r: any) => r.catalog_cost_row_id).filter(Boolean)
-      const { data: catalogCostRows, error: ccrErr } = catalogCostRowIds.length > 0
-        ? await supabase.from('catalog_cost_rows').select('*').in('id', catalogCostRowIds)
-        : { data: [], error: null }
-      if (ccrErr) throw ccrErr
-
-      await supabase.from('proposal_item_rows').delete().eq('proposal_id', proposalId)
-      await supabase.from('proposal_items').delete().eq('proposal_id', proposalId)
-      await supabase.from('proposal_sections').delete().eq('proposal_id', proposalId)
-
-      await supabase.from('proposals')
-        .update({ terms_and_conditions: templateData?.terms_and_conditions || null })
-        .eq('id', proposalId)
-
-      const newSections = tSections.map((ts: any) => ({
-        id: crypto.randomUUID(), proposal_id: proposalId, name: ts.name, _tid: ts.id,
-      }))
-      await supabase.from('proposal_sections').insert(newSections.map(({ _tid, ...r }) => r))
-
-      const newItems: any[] = []
-      for (const ts of tSections) {
-        const ns = newSections.find((s: any) => s._tid === ts.id)
-        if (!ns) continue
-        for (const ti of (tItems || []).filter((i: any) => i.section_id === ts.id)) {
-          const ci = (catalogItems || []).find((c: any) => c.id === ti.catalog_item_id)
-          newItems.push({
-            id: crypto.randomUUID(), proposal_id: proposalId, section_id: ns.id,
-            name: ci?.name || '', description: ci?.description || '',
-            display_quantity: toNumericOrNull(ti.display_quantity),
-            display_unit: ti.display_unit || ci?.unit || '',
-            _tid: ti.id,
-          })
-        }
-      }
-      await supabase.from('proposal_items').insert(newItems.map(({ _tid, ...r }) => r))
-
-      const newRows: any[] = []
-      for (const ti of (tItems || [])) {
-        const ni = newItems.find((i: any) => i._tid === ti.id)
-        if (!ni) continue
-        for (const tr of (tRows || []).filter((r: any) => r.item_id === ti.id)) {
-          const cr = (catalogCostRows || []).find((c: any) => c.id === tr.catalog_cost_row_id)
-          newRows.push({
-            id: crypto.randomUUID(), proposal_id: proposalId, item_id: ni.id,
-            name: cr?.name || '', quantity: toNumericOrNull(tr.quantity) ?? 0,
-            unit: cr?.unit || '', unit_cost: toNumericOrNull(cr?.unit_cost) ?? 0,
-          })
-        }
-      }
-      if (newRows.length > 0) await supabase.from('proposal_item_rows').insert(newRows)
-
-      await loadProposal()
-      setSelectedTemplateId('')
-    } catch (err: any) {
-      console.error('Template load failed:', err)
-      setTemplateError(err.message || 'Something went wrong loading the template.')
-    } finally {
-      setIsLoadingTemplate(false)
+  function addItem(sectionIndex: number) {
+    const newItem: ProposalItem = {
+      id: crypto.randomUUID(), section_id: sections[sectionIndex].id,
+      proposal_id: proposalId!, name: 'New Item', description: '',
+      display_quantity: '', display_unit: '', rows: []
     }
+    setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : { ...s, items: [...s.items, newItem] }))
+    markDirty()
+  }
+
+  function deleteItem(sectionIndex: number, itemId: string) {
+    if (!window.confirm('Delete this item and its cost rows?')) return
+    setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : { ...s, items: s.items.filter((i) => i.id !== itemId) }))
+    markDirty()
+  }
+
+  function addCostRow(sectionIndex: number, itemIndex: number) {
+    const newRow: CostRow = {
+      id: crypto.randomUUID(), item_id: sections[sectionIndex].items[itemIndex].id,
+      proposal_id: proposalId!, name: 'New Row', quantity: 0, unit: '', unit_cost: 0
+    }
+    setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : {
+      ...s, items: s.items.map((item, ii) => ii !== itemIndex ? item : { ...item, rows: [...item.rows, newRow] })
+    }))
+    markDirty()
+  }
+
+  function deleteCostRow(sectionIndex: number, itemIndex: number, rowId: string) {
+    setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : {
+      ...s, items: s.items.map((item, ii) => ii !== itemIndex ? item : { ...item, rows: item.rows.filter((r) => r.id !== rowId) })
+    }))
+    markDirty()
+  }
+
+  // ─── Update helpers ────────────────────────────────────────────────────────
+
+  function updateSectionName(sectionIndex: number, value: string) {
+    setSections((prev) => prev.map((s, si) => si !== sectionIndex ? s : { ...s, name: value }))
+    markDirty()
   }
 
   function updateItem(sectionIndex: number, itemIndex: number, field: keyof ProposalItem, value: any) {
@@ -469,6 +350,8 @@ function ProposalBuilder() {
   }
 
   function markDirty() { setIsDirty(true); setSaveStatus('unsaved') }
+
+  // ─── Save ──────────────────────────────────────────────────────────────────
 
   async function saveProposal() {
     if (!proposalId || isSaving) return
@@ -515,25 +398,137 @@ function ProposalBuilder() {
     }
   }
 
+  // ─── Send for signature ────────────────────────────────────────────────────
+
+  async function sendForSignature() {
+    if (!proposalId || isSending) return
+    if (isDirty) { alert('Please save the proposal before sending for signature.'); return }
+    const confirmed = window.confirm('This will send the proposal to the client for electronic signature. Continue?')
+    if (!confirmed) return
+
+    setIsSending(true); setSendError(null); setSendSuccess(false)
+    try {
+      const res = await fetch('/api/send-for-signature', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposalId }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setSendError(data.error || 'Failed to send for signature.'); return }
+      setSendSuccess(true)
+      setProposalStatus('sent')
+      const { data: proposalData } = await supabase.from('proposals').select('lead_id').eq('id', proposalId).single()
+      if (proposalData?.lead_id) {
+        await supabase.from('leads').update({ status: 'proposal_sent' }).eq('id', proposalData.lead_id)
+      }
+    } catch (err: any) {
+      setSendError(err.message || 'Something went wrong.')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // ─── Load template ─────────────────────────────────────────────────────────
+
+  async function handleLoadTemplate() {
+    if (!selectedTemplateId || !proposalId) return
+    const confirmReplace = sections.length > 0
+      ? window.confirm('This will replace all existing content in this proposal. Continue?')
+      : true
+    if (!confirmReplace) return
+
+    setIsLoadingTemplate(true); setTemplateError(null)
+    try {
+      const { data: templateData } = await supabase.from('templates').select('terms_and_conditions').eq('id', selectedTemplateId).single()
+      const { data: tSections, error: tsErr } = await supabase.from('template_sections').select('*').eq('template_id', selectedTemplateId).order('sort_order', { ascending: true })
+      if (tsErr) throw tsErr
+      if (!tSections || tSections.length === 0) throw new Error('No sections found in this template.')
+
+      const tSectionIds = tSections.map((s: any) => s.id)
+      const { data: tItems, error: tiErr } = await supabase.from('template_items').select('*').in('section_id', tSectionIds).order('sort_order', { ascending: true })
+      if (tiErr) throw tiErr
+
+      const catalogItemIds = (tItems || []).map((i: any) => i.catalog_item_id).filter(Boolean)
+      const { data: catalogItems, error: ciErr } = catalogItemIds.length > 0
+        ? await supabase.from('catalog_items').select('*').in('id', catalogItemIds)
+        : { data: [], error: null }
+      if (ciErr) throw ciErr
+
+      const tItemIds = (tItems || []).map((i: any) => i.id)
+      const { data: tRows, error: trErr } = tItemIds.length > 0
+        ? await supabase.from('template_item_rows').select('*').in('item_id', tItemIds).order('sort_order', { ascending: true })
+        : { data: [], error: null }
+      if (trErr) throw trErr
+
+      const catalogCostRowIds = (tRows || []).map((r: any) => r.catalog_cost_row_id).filter(Boolean)
+      const { data: catalogCostRows, error: ccrErr } = catalogCostRowIds.length > 0
+        ? await supabase.from('catalog_cost_rows').select('*').in('id', catalogCostRowIds)
+        : { data: [], error: null }
+      if (ccrErr) throw ccrErr
+
+      await supabase.from('proposal_item_rows').delete().eq('proposal_id', proposalId)
+      await supabase.from('proposal_items').delete().eq('proposal_id', proposalId)
+      await supabase.from('proposal_sections').delete().eq('proposal_id', proposalId)
+      await supabase.from('proposals').update({ terms_and_conditions: templateData?.terms_and_conditions || null }).eq('id', proposalId)
+
+      const newSections = tSections.map((ts: any) => ({ id: crypto.randomUUID(), proposal_id: proposalId, name: ts.name, _tid: ts.id }))
+      await supabase.from('proposal_sections').insert(newSections.map(({ _tid, ...r }) => r))
+
+      const newItems: any[] = []
+      for (const ts of tSections) {
+        const ns = newSections.find((s: any) => s._tid === ts.id)
+        if (!ns) continue
+        for (const ti of (tItems || []).filter((i: any) => i.section_id === ts.id)) {
+          const ci = (catalogItems || []).find((c: any) => c.id === ti.catalog_item_id)
+          newItems.push({
+            id: crypto.randomUUID(), proposal_id: proposalId, section_id: ns.id,
+            name: ci?.name || '', description: ci?.description || '',
+            display_quantity: toNumericOrNull(ti.display_quantity),
+            display_unit: ti.display_unit || ci?.unit || '', _tid: ti.id,
+          })
+        }
+      }
+      await supabase.from('proposal_items').insert(newItems.map(({ _tid, ...r }) => r))
+
+      const newRows: any[] = []
+      for (const ti of (tItems || [])) {
+        const ni = newItems.find((i: any) => i._tid === ti.id)
+        if (!ni) continue
+        for (const tr of (tRows || []).filter((r: any) => r.item_id === ti.id)) {
+          const cr = (catalogCostRows || []).find((c: any) => c.id === tr.catalog_cost_row_id)
+          newRows.push({
+            id: crypto.randomUUID(), proposal_id: proposalId, item_id: ni.id,
+            name: cr?.name || '', quantity: toNumericOrNull(tr.quantity) ?? 0,
+            unit: cr?.unit || '', unit_cost: toNumericOrNull(cr?.unit_cost) ?? 0,
+          })
+        }
+      }
+      if (newRows.length > 0) await supabase.from('proposal_item_rows').insert(newRows)
+
+      await loadProposal()
+      setSelectedTemplateId('')
+    } catch (err: any) {
+      console.error('Template load failed:', err)
+      setTemplateError(err.message || 'Something went wrong loading the template.')
+    } finally {
+      setIsLoadingTemplate(false)
+    }
+  }
+
   const proposalTotal = sections.reduce((sT, s) => sT + s.items.reduce((iT, i) =>
     iT + i.rows.reduce((rT, r) => rT + Number(r.quantity || 0) * Number(r.unit_cost || 0), 0), 0), 0)
 
   const statusColors: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-600',
-    sent: 'bg-amber-100 text-amber-700',
-    viewed: 'bg-blue-100 text-blue-700',
-    signed: 'bg-green-100 text-green-700',
+    draft: 'bg-gray-100 text-gray-600', sent: 'bg-amber-100 text-amber-700',
+    viewed: 'bg-blue-100 text-blue-700', signed: 'bg-green-100 text-green-700',
   }
 
   if (!proposalId) return <p className="p-10 text-gray-400">No proposal ID provided.</p>
 
   return (
-    // ── KEY FIX: h-screen instead of min-h-screen ──────────────────────────
     <div className="flex h-screen bg-[#f4f7fb] overflow-hidden">
-
       <NavSidebar />
 
-      {/* SECTIONS JUMP PANEL — only in builder mode with sections */}
+      {/* SECTIONS JUMP PANEL */}
       {activeTab === 'builder' && sections.length > 0 && (
         <div className="flex-shrink-0 print:hidden overflow-y-auto" style={{ width: 180, background: 'white', borderRight: '0.5px solid #eee' }}>
           <div style={{ padding: '16px 12px 12px' }}>
@@ -541,27 +536,18 @@ function ProposalBuilder() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {sections.map((section) => (
                 <button key={section.id}
-                  onClick={() => {
-                    const el = document.getElementById(`section-${section.id}`)
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }}
+                  onClick={() => document.getElementById(`section-${section.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   style={{ textAlign: 'left', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#555', lineHeight: 1.3 }}
                   onMouseOver={(e) => { e.currentTarget.style.background = '#E6F1FB'; e.currentTarget.style.color = '#0C447C' }}
-                  onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' }}
-                >
+                  onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' }}>
                   {section.name}
                 </button>
               ))}
               <div style={{ borderTop: '0.5px solid #f0f0f0', marginTop: 6, paddingTop: 6 }}>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('proposal-total')
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' })
-                  }}
+                <button onClick={() => document.getElementById('proposal-total')?.scrollIntoView({ behavior: 'smooth', block: 'end' })}
                   style={{ textAlign: 'left', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#aaa', width: '100%' }}
                   onMouseOver={(e) => { e.currentTarget.style.background = '#f5f5f5'; e.currentTarget.style.color = '#555' }}
-                  onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#aaa' }}
-                >
+                  onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#aaa' }}>
                   Total
                 </button>
               </div>
@@ -570,10 +556,10 @@ function ProposalBuilder() {
         </div>
       )}
 
-      {/* MAIN — scrolls independently */}
+      {/* MAIN */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* TOP BAR — sticky within the main column */}
+        {/* TOP BAR */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-10 py-4 flex items-center justify-between shadow-sm print:hidden">
           <div className="flex items-center gap-3">
             <input
@@ -589,65 +575,35 @@ function ProposalBuilder() {
 
           <div className="flex items-center gap-3">
             <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setActiveTab('builder')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'builder' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-              >
-                Builder
-              </button>
-              <button
-                onClick={() => setActiveTab('preview')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'preview' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-              >
-                Preview
-              </button>
+              <button onClick={() => setActiveTab('builder')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'builder' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>Builder</button>
+              <button onClick={() => setActiveTab('preview')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'preview' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>Preview</button>
             </div>
 
-            <span className={`text-sm ${
-              saveStatus === 'saved' ? 'text-green-600' :
-              saveStatus === 'unsaved' ? 'text-amber-500' :
-              saveStatus === 'saving' ? 'text-gray-400' : 'text-red-500'
-            }`}>
-              {saveStatus === 'saved' && '✓ Saved'}
-              {saveStatus === 'unsaved' && '● Unsaved changes'}
-              {saveStatus === 'saving' && 'Saving…'}
-              {saveStatus === 'error' && '✕ Save failed'}
+            <span className={`text-sm ${saveStatus === 'saved' ? 'text-green-600' : saveStatus === 'unsaved' ? 'text-amber-500' : saveStatus === 'saving' ? 'text-gray-400' : 'text-red-500'}`}>
+              {saveStatus === 'saved' && '✓ Saved'}{saveStatus === 'unsaved' && '● Unsaved changes'}{saveStatus === 'saving' && 'Saving…'}{saveStatus === 'error' && '✕ Save failed'}
             </span>
 
-            <button
-              onClick={saveProposal}
-              disabled={isSaving || !isDirty}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${isDirty && !isSaving ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-            >
+            <button onClick={saveProposal} disabled={isSaving || !isDirty}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${isDirty && !isSaving ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
               {isSaving ? 'Saving…' : 'Save'}
             </button>
 
             {proposalStatus !== 'signed' && (
-              <button
-                onClick={sendForSignature}
-                disabled={isSending || sections.length === 0}
-                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!isSending && sections.length > 0 ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-              >
+              <button onClick={sendForSignature} disabled={isSending || sections.length === 0}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${!isSending && sections.length > 0 ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
                 {isSending ? 'Sending…' : proposalStatus === 'sent' || proposalStatus === 'viewed' ? 'Resend for Signature' : 'Send for Signature'}
               </button>
             )}
-
             {proposalStatus === 'signed' && (
               <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700">✓ Signed</span>
             )}
           </div>
         </div>
 
-        {sendError && (
-          <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden flex-shrink-0">{sendError}</div>
-        )}
-        {sendSuccess && (
-          <div className="mx-10 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 print:hidden flex-shrink-0">
-            ✓ Proposal sent successfully! The client will receive an email with a link to review and sign.
-          </div>
-        )}
+        {sendError && <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden flex-shrink-0">{sendError}</div>}
+        {sendSuccess && <div className="mx-10 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 print:hidden flex-shrink-0">✓ Proposal sent! The client will receive an email with a link to review and sign.</div>}
 
-        {/* SCROLLABLE CONTENT AREA */}
+        {/* SCROLLABLE CONTENT */}
         {activeTab === 'preview' && (
           <div className="flex-1 overflow-y-auto bg-gray-100">
             <ProposalPreview proposalId={proposalId} proposalTitle={proposalTitle} />
@@ -657,24 +613,17 @@ function ProposalBuilder() {
         {activeTab === 'builder' && (
           <div className="flex-1 overflow-y-auto p-10">
 
+            {/* Load template */}
             <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8 shadow-sm">
               <p className="text-sm font-medium text-gray-600 mb-3">Load a template</p>
               <div className="flex items-center gap-3">
-                <select
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  value={selectedTemplateId}
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
-                >
+                <select className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)}>
                   <option value="">— Select a template —</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
-                <button
-                  onClick={handleLoadTemplate}
-                  disabled={!selectedTemplateId || isLoadingTemplate}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${selectedTemplateId && !isLoadingTemplate ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                >
+                <button onClick={handleLoadTemplate} disabled={!selectedTemplateId || isLoadingTemplate}
+                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${selectedTemplateId && !isLoadingTemplate ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
                   {isLoadingTemplate ? 'Loading…' : 'Load Template'}
                 </button>
               </div>
@@ -682,78 +631,109 @@ function ProposalBuilder() {
             </div>
 
             {sections.length === 0 && (
-              <p className="text-gray-400">No data found for this proposal. Select a template above to get started.</p>
+              <div className="text-center py-12">
+                <p className="text-gray-400 mb-4">No sections yet. Load a template above or add a section manually.</p>
+                <button onClick={addSection} className="px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
+                  + Add Section
+                </button>
+              </div>
             )}
 
             {sections.map((section, sIndex) => (
               <div key={section.id} id={`section-${section.id}`} className="mb-10" style={{ scrollMarginTop: 20 }}>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">{section.name}</h2>
+
+                {/* Section header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <input
+                    className="text-sm font-semibold text-gray-600 uppercase tracking-wide bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-400 focus:outline-none px-1 py-0.5 flex-1"
+                    value={section.name}
+                    onChange={(e) => updateSectionName(sIndex, e.target.value)}
+                  />
+                  <button onClick={() => deleteSection(section.id)}
+                    className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                    Delete Section
+                  </button>
+                </div>
 
                 {section.items.map((item, iIndex) => {
-                  const itemTotal = item.rows.reduce((sum, row) =>
-                    sum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0)
-
+                  const itemTotal = item.rows.reduce((sum, row) => sum + Number(row.quantity || 0) * Number(row.unit_cost || 0), 0)
                   return (
                     <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-5 mb-5 shadow-sm">
-                      <div className="mb-4">
-                        <p className="text-xs font-medium text-gray-400 uppercase mb-2">Display (customer-facing)</p>
-                        <div className="grid grid-cols-4 gap-3">
-                          <div>
-                            <label className="text-xs text-gray-400 block mb-1">Name</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                              value={item.name || ''} onChange={(e) => updateItem(sIndex, iIndex, 'name', e.target.value)} />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-400 block mb-1">Description</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                              value={item.description || ''} onChange={(e) => updateItem(sIndex, iIndex, 'description', e.target.value)} />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-400 block mb-1">Qty</label>
-                            <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                              value={item.display_quantity || ''} onChange={(e) => updateItem(sIndex, iIndex, 'display_quantity', e.target.value)} />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-400 block mb-1">Unit</label>
-                            <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                              value={item.display_unit || ''} onChange={(e) => updateItem(sIndex, iIndex, 'display_unit', e.target.value)} />
-                          </div>
+
+                      {/* Item header with delete */}
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-medium text-gray-400 uppercase">Display (customer-facing)</p>
+                        <button onClick={() => deleteItem(sIndex, item.id)}
+                          className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                          Delete Item
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3 mb-4">
+                        <div>
+                          <label className="text-xs text-gray-400 block mb-1">Name</label>
+                          <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            value={item.name || ''} onChange={(e) => updateItem(sIndex, iIndex, 'name', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400 block mb-1">Description</label>
+                          <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            value={item.description || ''} onChange={(e) => updateItem(sIndex, iIndex, 'description', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400 block mb-1">Qty</label>
+                          <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            value={item.display_quantity || ''} onChange={(e) => updateItem(sIndex, iIndex, 'display_quantity', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400 block mb-1">Unit</label>
+                          <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            value={item.display_unit || ''} onChange={(e) => updateItem(sIndex, iIndex, 'display_unit', e.target.value)} />
                         </div>
                       </div>
 
                       <div className="border-t border-dashed border-gray-200 my-4" />
 
+                      {/* Cost rows */}
                       <div>
                         <p className="text-xs font-medium text-gray-400 uppercase mb-2">Cost rows (internal)</p>
-                        {item.rows.length === 0 ? (
-                          <p className="text-xs text-gray-400">No cost rows for this item.</p>
-                        ) : (
+                        {item.rows.length > 0 && (
                           <>
-                            <div className="grid grid-cols-5 gap-3 mb-1 px-1">
-                              <p className="text-xs text-gray-400">Name</p>
-                              <p className="text-xs text-gray-400">Qty</p>
-                              <p className="text-xs text-gray-400">Unit</p>
-                              <p className="text-xs text-gray-400">Unit cost</p>
-                              <p className="text-xs text-gray-400 text-right">Row total</p>
+                            <div className="grid gap-3 mb-1 px-1" style={{ gridTemplateColumns: '1fr 80px 80px 100px 100px 60px' }}>
+                              {['Name', 'Qty', 'Unit', 'Unit cost', 'Row total', ''].map((h) => (
+                                <p key={h} className="text-xs text-gray-400">{h}</p>
+                              ))}
                             </div>
                             <div className="space-y-2">
                               {item.rows.map((row, rIndex) => {
                                 const rowTotal = Number(row.quantity || 0) * Number(row.unit_cost || 0)
                                 return (
-                                  <div key={row.id} className="grid grid-cols-5 gap-3 items-center bg-gray-50 rounded-lg px-3 py-2">
-                                    <p className="text-sm text-gray-600 truncate">{row.name}</p>
-                                    <input type="number" className="border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                  <div key={row.id} className="grid gap-3 items-center bg-gray-50 rounded-lg px-3 py-2" style={{ gridTemplateColumns: '1fr 80px 80px 100px 100px 60px' }}>
+                                    <input className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                      value={row.name || ''} onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'name', e.target.value)} />
+                                    <input type="number" className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
                                       value={row.quantity === 0 || row.quantity === '0' ? '' : row.quantity || ''} placeholder="0"
                                       onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'quantity', e.target.value)} />
-                                    <p className="text-sm text-gray-500">{row.unit || '—'}</p>
-                                    <p className="text-sm text-gray-500">${Number(row.unit_cost || 0).toFixed(2)}</p>
+                                    <input className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                      value={row.unit || ''} onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'unit', e.target.value)} />
+                                    <input type="number" className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                      value={row.unit_cost || ''} placeholder="0.00"
+                                      onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'unit_cost', e.target.value)} />
                                     <p className="text-sm font-medium text-right">${rowTotal.toFixed(2)}</p>
+                                    <button onClick={() => deleteCostRow(sIndex, iIndex, row.id)}
+                                      className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                                      ✕
+                                    </button>
                                   </div>
                                 )
                               })}
                             </div>
                           </>
                         )}
+                        <button onClick={() => addCostRow(sIndex, iIndex)}
+                          className="mt-3 text-xs text-blue-500 hover:text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors">
+                          + Add Cost Row
+                        </button>
                       </div>
 
                       <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
@@ -764,13 +744,29 @@ function ProposalBuilder() {
                     </div>
                   )
                 })}
+
+                {/* Add Item button */}
+                <button onClick={() => addItem(sIndex)}
+                  className="text-sm text-blue-500 hover:text-blue-700 px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors">
+                  + Add Item to {section.name}
+                </button>
               </div>
             ))}
 
+            {/* Add Section button — always visible when there are sections */}
             {sections.length > 0 && (
-              <div id="proposal-total" className="flex justify-end mt-4">
+              <div className="mt-6">
+                <button onClick={addSection}
+                  className="px-5 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200">
+                  + Add Section
+                </button>
+              </div>
+            )}
+
+            {sections.length > 0 && (
+              <div id="proposal-total" className="flex justify-end mt-8">
                 <div className="bg-white border border-gray-200 rounded-xl px-8 py-5 shadow-sm text-right">
-                  <p className="text-sm text-gray-400 mb-1">Proposal total</p>
+                  <p className="text-sm text-gray-400 mb-1">Proposal total (before markup)</p>
                   <p className="text-2xl font-semibold text-blue-600">${proposalTotal.toFixed(2)}</p>
                 </div>
               </div>
