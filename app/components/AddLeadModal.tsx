@@ -17,7 +17,7 @@ function formatPhone(raw: string): string {
 }
 
 declare global {
-  interface Window { google: any; initGooglePlaces: () => void }
+  interface Window { google: any }
 }
 
 export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
@@ -32,9 +32,10 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
   const [service, setService] = useState('')
   const [source, setSource] = useState('')
   const [saving, setSaving] = useState(false)
+  const [placesLoaded, setPlacesLoaded] = useState(false)
 
-  const addressInputRef = useRef<HTMLInputElement>(null)
-  const autocompleteRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const manualInputRef = useRef<HTMLInputElement>(null)
 
   const inputStyle = {
     width: '100%', boxSizing: 'border-box' as const,
@@ -45,50 +46,91 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-    if (!apiKey || !addressInputRef.current) return
+    if (!apiKey) return
 
-    function initAutocomplete() {
-      if (!window.google?.maps?.places || !addressInputRef.current) return
+    async function loadAndInit() {
+      // Load script if needed
+      if (!document.getElementById('google-maps-script')) {
+        await new Promise<void>((resolve) => {
+          const script = document.createElement('script')
+          script.id = 'google-maps-script'
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&v=weekly`
+          script.async = true
+          script.onload = () => resolve()
+          script.onerror = () => resolve()
+          document.head.appendChild(script)
+        })
+      }
+
+      // Wait for Places to be ready
+      let attempts = 0
+      while (!window.google?.maps?.places?.PlaceAutocompleteElement && attempts < 50) {
+        await new Promise(r => setTimeout(r, 100))
+        attempts++
+      }
+
+      if (!window.google?.maps?.places?.PlaceAutocompleteElement) {
+        console.warn('PlaceAutocompleteElement not available')
+        return
+      }
+
+      if (!containerRef.current) return
+
       try {
-        autocompleteRef.current = new window.google.maps.places.Autocomplete(
-          addressInputRef.current,
-          { componentRestrictions: { country: 'us' }, types: ['address'], fields: ['formatted_address'] }
-        )
-        autocompleteRef.current.addListener('place_changed', () => {
-          const place = autocompleteRef.current.getPlace()
-          if (place?.formatted_address) {
-            setAddress(place.formatted_address)
+        const el = new window.google.maps.places.PlaceAutocompleteElement({
+          componentRestrictions: { country: 'us' },
+          types: ['address'],
+        })
+
+        // Style the element to match our inputs
+        el.style.cssText = `
+          width: 100%;
+          display: block;
+          --gmp-mat-combobox-input-shape: 12px;
+        `
+
+        containerRef.current.innerHTML = ''
+        containerRef.current.appendChild(el)
+        setPlacesLoaded(true)
+
+        // Listen for place selection
+        el.addEventListener('gmp-placeselect', async (event: any) => {
+          try {
+            const place = event.place
+            if (place) {
+              await place.fetchFields({ fields: ['formattedAddress', 'displayName'] })
+              const addr = place.formattedAddress || place.displayName?.text || ''
+              setAddress(addr)
+              console.log('Address selected:', addr)
+            }
+          } catch (err) {
+            console.error('Place select error:', err)
           }
         })
+
+        // Also listen for the newer event name just in case
+        el.addEventListener('gmp-select', async (event: any) => {
+          try {
+            const place = event.placePrediction?.toPlace?.()
+            if (place) {
+              await place.fetchFields({ fields: ['formattedAddress'] })
+              const addr = place.formattedAddress || ''
+              if (addr) {
+                setAddress(addr)
+                console.log('Address selected (gmp-select):', addr)
+              }
+            }
+          } catch (err) {
+            console.error('gmp-select error:', err)
+          }
+        })
+
       } catch (err) {
-        console.error('Autocomplete error:', err)
+        console.error('PlaceAutocompleteElement init error:', err)
       }
     }
 
-    if (window.google?.maps?.places) {
-      initAutocomplete()
-    } else {
-      // Load script if not already loaded
-      const existingScript = document.getElementById('google-maps-script')
-      if (!existingScript) {
-        window.initGooglePlaces = initAutocomplete
-        const script = document.createElement('script')
-        script.id = 'google-maps-script'
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces`
-        script.async = true
-        script.defer = true
-        document.head.appendChild(script)
-      } else {
-        // Script already loading — poll for ready
-        const interval = setInterval(() => {
-          if (window.google?.maps?.places) {
-            clearInterval(interval)
-            initAutocomplete()
-          }
-        }, 100)
-        setTimeout(() => clearInterval(interval), 10000)
-      }
-    }
+    loadAndInit()
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -96,8 +138,12 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
     if (!name.trim()) return
     setSaving(true)
 
-    // If user typed something in address field but didn't pick from dropdown, use what they typed
-    const finalAddress = address || addressInputRef.current?.value || ''
+    // If places loaded but address state is empty, try to get value from the inner input
+    let finalAddress = address
+    if (!finalAddress && containerRef.current) {
+      const innerInput = containerRef.current.querySelector('input')
+      finalAddress = innerInput?.value || ''
+    }
 
     await supabase.from('leads').insert([{
       name: name.trim(),
@@ -153,13 +199,25 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
 
             <div>
               <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Address</label>
-              <input
-                ref={addressInputRef}
-                type="text"
-                placeholder="Start typing an address…"
-                onChange={(e) => setAddress(e.target.value)}
-                style={inputStyle}
-              />
+              {/* Google Places mounts here */}
+              <div ref={containerRef} style={{ width: '100%' }} />
+              {/* Fallback plain input if Places doesn't load */}
+              {!placesLoaded && (
+                <input
+                  ref={manualInputRef}
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Start typing an address…"
+                  style={inputStyle}
+                />
+              )}
+              {/* Show confirmed address when selected from dropdown */}
+              {placesLoaded && address && (
+                <p style={{ fontSize: 11, color: '#27500A', margin: '4px 0 0', background: '#EAF3DE', padding: '4px 10px', borderRadius: 6 }}>
+                  ✓ {address}
+                </p>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
