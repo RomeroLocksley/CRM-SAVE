@@ -60,6 +60,7 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
   const [placesReady, setPlacesReady] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const addressInputRef = useRef<HTMLInputElement>(null)
 
   const inputStyle = {
     width: '100%', boxSizing: 'border-box' as const,
@@ -81,14 +82,7 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
           componentRestrictions: { country: 'us' },
           types: ['address'],
         })
-
-        // Match our input styling via inline style on the custom element
-        el.style.cssText = `
-          width: 100%;
-          --gmpx-color-surface: #fafafa;
-          --gmpx-font-size-base: 14px;
-        `
-
+        el.style.width = '100%'
         containerRef.current.innerHTML = ''
         containerRef.current.appendChild(el)
         setPlacesReady(true)
@@ -98,16 +92,14 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
             const place = e.placePrediction.toPlace()
             await place.fetchFields({ fields: ['formattedAddress'] })
             setAddress(place.formattedAddress || '')
-          } catch {
-            // fallback
-          }
+            // Scroll modal back into view after selection
+            containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          } catch { /* fallback */ }
         })
       } catch (err) {
         console.error('PlaceAutocompleteElement error:', err)
       }
-    }).catch((err) => {
-      console.error('Failed to load Google Maps:', err)
-    })
+    }).catch(console.error)
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -115,12 +107,9 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
     if (!name.trim()) return
     setSaving(true)
     await supabase.from('leads').insert([{
-      name: name.trim(),
-      email: email.trim() || null,
-      phone: phone || null,
-      address: address.trim() || null,
-      service: service || null,
-      source: source || null,
+      name: name.trim(), email: email.trim() || null,
+      phone: phone || null, address: address.trim() || null,
+      service: service || null, source: source || null,
       status: 'uncontacted',
     }])
     setSaving(false)
@@ -128,18 +117,25 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
-      <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 460, margin: '0 16px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', overflow: 'hidden' }}
-        onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
+      <div
+        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)' }}
+        className="md:rounded-[20px] md:max-w-[460px] md:m-4 md:max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Handle bar for mobile */}
+        <div className="md:hidden sticky top-0 bg-white pt-3 pb-1 z-10">
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e0e0e0', margin: '0 auto' }} />
+        </div>
 
-        <div style={{ padding: '24px 24px 0' }}>
+        <div style={{ padding: '16px 24px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
             <p style={{ fontSize: 16, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>New Lead</p>
             <button onClick={onClose} style={{ color: '#ccc', background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: '0 24px 24px' }}>
+        <form onSubmit={handleSubmit} style={{ padding: '0 24px 40px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
 
             <div>
@@ -158,18 +154,26 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
               </div>
             </div>
 
+            {/* Address — Google PlaceAutocompleteElement or plain fallback */}
             <div>
               <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Address</label>
-              {/* Google PlaceAutocompleteElement mounts here */}
-              <div ref={containerRef} style={{ width: '100%', minHeight: 42 }} />
-              {/* Fallback plain input if Places not ready */}
+              {/* Google Places mounts here */}
+              <div ref={containerRef} style={{ width: '100%', minHeight: placesReady ? 42 : 0 }} />
+              {/* Plain input shown until Places loads */}
               {!placesReady && (
                 <input
+                  ref={addressInputRef}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Start typing an address…"
-                  style={{ ...inputStyle, marginTop: -42 }}
+                  style={inputStyle}
                 />
+              )}
+              {/* Keep address value in sync if user typed manually */}
+              {placesReady && address && (
+                <p style={{ fontSize: 11, color: '#27500A', margin: '4px 0 0', background: '#EAF3DE', padding: '4px 8px', borderRadius: 6 }}>
+                  ✓ {address}
+                </p>
               )}
             </div>
 
@@ -192,7 +196,7 @@ export default function AddLeadModal({ onClose, onSaved, serviceOptions }: {
           </div>
 
           <button type="submit" disabled={saving || !name.trim()}
-            style={{ width: '100%', padding: '11px', borderRadius: 12, background: name.trim() ? '#185FA5' : '#f0f0f0', color: name.trim() ? 'white' : '#bbb', fontWeight: 500, fontSize: 14, border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed', marginTop: 4 }}>
+            style={{ width: '100%', padding: '13px', borderRadius: 12, background: name.trim() ? '#185FA5' : '#f0f0f0', color: name.trim() ? 'white' : '#bbb', fontWeight: 500, fontSize: 15, border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>
             {saving ? 'Saving…' : 'Add Lead'}
           </button>
         </form>
