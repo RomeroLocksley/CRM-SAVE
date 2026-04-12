@@ -220,12 +220,20 @@ export default function LeadModal({
   const inputStyle = { width: '100%', boxSizing: 'border-box' as const, padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setSelectedLead(null)}>
-      <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 480, margin: '0 16px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setSelectedLead(null)}>
+      <div
+        className="md:rounded-[20px] md:max-w-[480px] md:m-4"
+        style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 -10px 40px rgba(0,0,0,0.15)' }}
         onClick={(e) => e.stopPropagation()}>
 
+        {/* Mobile drag handle */}
+        <div className="md:hidden flex-shrink-0" style={{ padding: '12px 0 4px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e0e0e0' }} />
+        </div>
+
         {/* Fixed header */}
-        <div style={{ padding: '24px 24px 0', flexShrink: 0 }}>
+        <div style={{ padding: '12px 24px 0', flexShrink: 0 }}
+          className="md:pt-[24px]">
 
           {/* Avatar + name */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -366,7 +374,7 @@ export default function LeadModal({
             <button className="hidden md:block" onClick={createProposal} style={{ flex: 1, padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 13, border: 'none', cursor: 'pointer' }}>
               + Create Proposal
             </button>
-            <button onClick={() => setShowSchedule(!showSchedule)} style={{ flex: 1, padding: '10px', borderRadius: 12, background: showSchedule ? '#FAEEDA' : '#f9f9f9', color: showSchedule ? '#633806' : '#555', fontWeight: 500, fontSize: 13, border: '0.5px solid #e5e5e5', cursor: 'pointer' }}>
+            <button onClick={() => setShowSchedule(!showSchedule)} style={{ flex: 1, padding: '12px 10px', borderRadius: 12, background: showSchedule ? '#FAEEDA' : '#f9f9f9', color: showSchedule ? '#633806' : '#555', fontWeight: 500, fontSize: 14, border: '0.5px solid #e5e5e5', cursor: 'pointer' }}>
               📅 Schedule Appointment
             </button>
           </div>
@@ -472,8 +480,8 @@ export default function LeadModal({
             <p style={{ fontSize: 11, fontWeight: 500, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>Notes</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               <input placeholder="Add a note…" value={noteText} onChange={(e) => setNoteText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addNote()}
-                style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#f9f9f9', fontSize: 14, outline: 'none' }} />
-              <button onClick={addNote} style={{ padding: '9px 16px', borderRadius: 10, background: '#185FA5', color: 'white', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', flexShrink: 0 }}>Add</button>
+                style={{ flex: 1, padding: '12px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#f9f9f9', fontSize: 16, outline: 'none' }} />
+              <button onClick={addNote} style={{ padding: '12px 16px', borderRadius: 10, background: '#185FA5', color: 'white', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', flexShrink: 0 }}>Add</button>
             </div>
             {sortedNotes.length === 0 ? (
               <p style={{ fontSize: 13, color: '#bbb' }}>No notes yet.</p>
