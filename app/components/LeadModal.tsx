@@ -389,7 +389,7 @@ export default function LeadModal({
 
           {/* Schedule Appointment form — inside scrollable area */}
           {showSchedule && (
-            <div style={{ background: '#fafafa', borderRadius: 14, padding: '16px', marginBottom: 16, border: '1.5px solid #e0e0e0' }}>
+            <div style={{ background: '#fafafa', borderRadius: 14, padding: '14px', marginBottom: 16, border: '1.5px solid #e0e0e0', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', margin: '0 0 14px' }}>New Appointment</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
@@ -403,18 +403,18 @@ export default function LeadModal({
                 <div>
                   <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>Date</label>
                   <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 12px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e' }} />
+                    style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '12px 10px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e', display: 'block' }} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div>
                     <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>Start Time</label>
                     <input type="time" value={apptTime} onChange={(e) => setApptTime(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 10px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e' }} />
+                      style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '12px 8px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 14, outline: 'none', color: '#1a1a2e', display: 'block' }} />
                   </div>
                   <div>
                     <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>End Time</label>
                     <input type="time" value={apptEndTime} onChange={(e) => setApptEndTime(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 10px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e' }} />
+                      style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '12px 8px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 14, outline: 'none', color: '#1a1a2e', display: 'block' }} />
                   </div>
                 </div>
                 <div>
