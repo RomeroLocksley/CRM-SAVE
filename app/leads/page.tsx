@@ -113,7 +113,7 @@ export default function LeadsPage() {
           {/* Search */}
           <div className="flex-shrink-0 px-4 md:px-8 py-3">
             <input placeholder="Search leads..." value={search} onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '9px 14px', borderRadius: 10, border: '0.5px solid #e0e0e0', background: 'white', fontSize: 14, outline: 'none' }} />
+              style={{ width: '100%', boxSizing: 'border-box', padding: '9px 14px', borderRadius: 10, border: '0.5px solid #e0e0e0', background: 'white', fontSize: 16, outline: 'none' }} />
           </div>
 
           {/* Content */}
