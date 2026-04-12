@@ -72,6 +72,13 @@ export default function ProjectsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [showNewProject, setShowNewProject] = useState(false)
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
+  const [mobileTab, setMobileTab] = useState<'updates' | 'timeclock'>('updates')
+  const [mobileProject, setMobileProject] = useState<any>(null)
+  const [mobileLogs, setMobileLogs] = useState<any[]>([])
+  const [mobileTimeEntries, setMobileTimeEntries] = useState<any[]>([])
+  const [mobileNewLog, setMobileNewLog] = useState('')
+  const [mobileClockEmployee, setMobileClockEmployee] = useState('')
 
   const [project, setProject] = useState<any>(null)
   const [stages, setStages] = useState<any[]>([])
@@ -349,12 +356,187 @@ export default function ProjectsPage() {
   const btnPrimary = { padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500 as const, border: 'none', cursor: 'pointer', background: '#185FA5', color: 'white' }
   const inputStyle = { padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' } as React.CSSProperties
 
+  // ─── Mobile helpers ───────────────────────────────────────────────────────
+
+  async function loadMobileProject(proj: any) {
+    setMobileProject(proj)
+    setMobileView('detail')
+    setMobileTab('updates')
+    const { data: logs } = await supabase.from('project_daily_logs').select('*').eq('project_id', proj.id).order('created_at', { ascending: false })
+    setMobileLogs(logs || [])
+    const { data: entries } = await supabase.from('time_clock').select('*').eq('project_id', proj.id).order('clock_in', { ascending: false })
+    setMobileTimeEntries(entries || [])
+  }
+
+  async function mobileAddLog() {
+    if (!mobileNewLog.trim() || !mobileProject) return
+    await supabase.from('project_daily_logs').insert([{ project_id: mobileProject.id, note: mobileNewLog.trim(), created_by: mobileClockEmployee || 'Field' }])
+    setMobileNewLog('')
+    const { data } = await supabase.from('project_daily_logs').select('*').eq('project_id', mobileProject.id).order('created_at', { ascending: false })
+    setMobileLogs(data || [])
+  }
+
+  async function mobileClockIn() {
+    if (!mobileClockEmployee.trim() || !mobileProject) return
+    await supabase.from('time_clock').insert([{ project_id: mobileProject.id, employee_name: mobileClockEmployee.trim(), clock_in: new Date().toISOString() }])
+    const { data } = await supabase.from('time_clock').select('*').eq('project_id', mobileProject.id).order('clock_in', { ascending: false })
+    setMobileTimeEntries(data || [])
+  }
+
+  async function mobileClockOut(entryId: string) {
+    await supabase.from('time_clock').update({ clock_out: new Date().toISOString() }).eq('id', entryId)
+    const { data } = await supabase.from('time_clock').select('*').eq('project_id', mobileProject.id).order('clock_in', { ascending: false })
+    setMobileTimeEntries(data || [])
+  }
+
+  function mobileHoursWorked(entry: any): number {
+    if (!entry.clock_in || !entry.clock_out) return 0
+    return (new Date(entry.clock_out).getTime() - new Date(entry.clock_in).getTime()) / 3600000
+  }
+
+  const activeProjects = projects.filter((p) => p.status === 'active')
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#f4f7fb' }}>
       <NavSidebar />
 
-      {/* PROJECTS LIST SIDEBAR */}
-      <div className="flex flex-col flex-shrink-0" style={{ width: 240, background: 'white', borderRight: '0.5px solid #eee' }}>
+      {/* ── MOBILE VIEW ──────────────────────────────────────────── */}
+      <div className="md:hidden flex-1 flex flex-col overflow-hidden" style={{ background: '#f4f7fb' }}>
+
+        {mobileView === 'list' ? (
+          <>
+            {/* Header */}
+            <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0, color: '#1a1a2e' }}>Projects</h1>
+            </div>
+            {/* Active project cards */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 100px' }}>
+              {activeProjects.length === 0 && <p style={{ textAlign: 'center', color: '#bbb', fontSize: 14, marginTop: 32 }}>No active projects.</p>}
+              {activeProjects.map((p) => (
+                <div key={p.id} onClick={() => loadMobileProject(p)}
+                  style={{ background: 'white', borderRadius: 14, padding: '14px 16px', marginBottom: 12, border: '0.5px solid #e8e8e8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', background: p.color || '#185FA5', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      {p.project_number && <span style={{ fontSize: 10, fontWeight: 600, color: '#aaa', background: '#f0f0f0', padding: '1px 6px', borderRadius: 20 }}>#{p.project_number}</span>}
+                      <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                    </div>
+                    <p style={{ fontSize: 13, color: '#777', margin: 0 }}>{p.leads?.name || '—'}</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Project detail header */}
+            <div style={{ flexShrink: 0, background: 'white', borderBottom: '0.5px solid #eee', padding: '12px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <button onClick={() => setMobileView('list')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#185FA5', fontSize: 20 }}>‹</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: mobileProject?.color || '#185FA5', flexShrink: 0 }} />
+                  <p style={{ fontSize: 16, fontWeight: 600, margin: 0, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mobileProject?.name}</p>
+                </div>
+              </div>
+              {/* Tab bar */}
+              <div style={{ display: 'flex', gap: 0, border: '0.5px solid #e5e5e5', borderRadius: 10, overflow: 'hidden' }}>
+                {[{ id: 'updates', label: 'Project Updates' }, { id: 'timeclock', label: 'Time Clock' }].map((tab) => (
+                  <button key={tab.id} onClick={() => setMobileTab(tab.id as any)}
+                    style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', background: mobileTab === tab.id ? (mobileProject?.color || '#185FA5') : 'white', color: mobileTab === tab.id ? 'white' : '#666' }}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
+
+              {/* Project Updates tab */}
+              {mobileTab === 'updates' && (
+                <div>
+                  <div style={{ background: 'white', borderRadius: 14, padding: '14px', marginBottom: 14, border: '0.5px solid #e8e8e8' }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#555', margin: '0 0 10px' }}>Add Update</p>
+                    <div style={{ marginBottom: 8 }}>
+                      <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Your Name</label>
+                      <input value={mobileClockEmployee} onChange={(e) => setMobileClockEmployee(e.target.value)} placeholder="Enter your name"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }} />
+                    </div>
+                    <textarea value={mobileNewLog} onChange={(e) => setMobileNewLog(e.target.value)} placeholder="What happened today?" rows={3}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none', resize: 'none', lineHeight: 1.5, marginBottom: 10 }} />
+                    <button onClick={mobileAddLog} disabled={!mobileNewLog.trim()}
+                      style={{ width: '100%', padding: '12px', borderRadius: 12, background: mobileNewLog.trim() ? (mobileProject?.color || '#185FA5') : '#f0f0f0', color: mobileNewLog.trim() ? 'white' : '#bbb', fontSize: 14, fontWeight: 500, border: 'none', cursor: mobileNewLog.trim() ? 'pointer' : 'not-allowed' }}>
+                      Post Update
+                    </button>
+                  </div>
+                  {mobileLogs.map((log) => (
+                    <div key={log.id} style={{ background: 'white', borderRadius: 12, padding: '12px 14px', marginBottom: 10, border: '0.5px solid #e8e8e8' }}>
+                      <p style={{ fontSize: 14, color: '#333', margin: '0 0 6px', lineHeight: 1.5 }}>{log.note}</p>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: mobileProject?.color || '#185FA5', fontWeight: 500 }}>{log.created_by}</span>
+                        <span style={{ color: '#ddd' }}>•</span>
+                        <span style={{ fontSize: 12, color: '#aaa' }}>{formatTs(log.created_at)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {mobileLogs.length === 0 && <p style={{ textAlign: 'center', color: '#bbb', fontSize: 13, marginTop: 16 }}>No updates yet.</p>}
+                </div>
+              )}
+
+              {/* Time Clock tab */}
+              {mobileTab === 'timeclock' && (
+                <div>
+                  {/* Name input — persists across tabs */}
+                  <div style={{ background: 'white', borderRadius: 14, padding: '14px', marginBottom: 14, border: '0.5px solid #e8e8e8' }}>
+                    <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Your Name</label>
+                    <input value={mobileClockEmployee} onChange={(e) => setMobileClockEmployee(e.target.value)} placeholder="Enter your name"
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 14, outline: 'none' }} />
+                  </div>
+
+                  {/* Currently clocked in? */}
+                  {mobileTimeEntries.filter((e) => !e.clock_out && e.employee_name === mobileClockEmployee).map((entry) => (
+                    <div key={entry.id} style={{ background: '#EAF3DE', border: '0.5px solid #c0dd97', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#27500A', margin: '0 0 4px' }}>✓ Clocked in</p>
+                      <p style={{ fontSize: 12, color: '#555', margin: '0 0 12px' }}>Since {formatTs(entry.clock_in)}</p>
+                      <button onClick={() => mobileClockOut(entry.id)}
+                        style={{ width: '100%', padding: '12px', borderRadius: 12, background: '#27500A', color: 'white', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+                        Clock Out
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Clock in button — only if not already clocked in */}
+                  {mobileTimeEntries.filter((e) => !e.clock_out && e.employee_name === mobileClockEmployee).length === 0 && (
+                    <button onClick={mobileClockIn} disabled={!mobileClockEmployee.trim()}
+                      style={{ width: '100%', padding: '16px', borderRadius: 14, background: mobileClockEmployee.trim() ? (mobileProject?.color || '#185FA5') : '#f0f0f0', color: mobileClockEmployee.trim() ? 'white' : '#bbb', fontSize: 16, fontWeight: 600, border: 'none', cursor: mobileClockEmployee.trim() ? 'pointer' : 'not-allowed', marginBottom: 14 }}>
+                      Clock In to {mobileProject?.name}
+                    </button>
+                  )}
+
+                  {/* Time log */}
+                  {mobileTimeEntries.filter((e) => e.clock_out).length > 0 && (
+                    <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', border: '0.5px solid #e8e8e8' }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 14px', borderBottom: '0.5px solid #f0f0f0', margin: 0 }}>Recent Time Entries</p>
+                      {mobileTimeEntries.filter((e) => e.clock_out).slice(0, 10).map((entry, i, arr) => (
+                        <div key={entry.id} style={{ padding: '10px 14px', borderBottom: i < arr.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', margin: 0 }}>{entry.employee_name}</p>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: mobileProject?.color || '#185FA5', margin: 0 }}>{mobileHoursWorked(entry).toFixed(1)} hrs</p>
+                          </div>
+                          <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>{formatTs(entry.clock_in)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* PROJECTS LIST SIDEBAR — desktop only */}
+      <div className="hidden md:flex flex-col flex-shrink-0" style={{ width: 240, background: 'white', borderRight: '0.5px solid #eee' }}>
         <div style={{ padding: '20px 16px 12px', borderBottom: '0.5px solid #f0f0f0' }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', margin: '0 0 12px' }}>Projects</p>
           <button onClick={() => setShowNewProject(true)} style={{ ...btnPrimary, width: '100%', padding: '9px', borderRadius: 9, fontSize: 13 }}>+ New Project</button>
@@ -383,8 +565,8 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* MAIN CONTENT — desktop only */}
+      <div className="hidden md:flex flex-1 flex-col overflow-hidden">
         {!selectedProjectId ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
             <p style={{ fontSize: 16, color: '#bbb' }}>Select a project or create a new one.</p>
