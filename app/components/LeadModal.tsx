@@ -76,6 +76,7 @@ export default function LeadModal({
   addNote, proposals, onProposalDeleted, onLeadUpdated, serviceOptions,
 }: any) {
   const [editing, setEditing] = useState(false)
+  const [currentUser, setCurrentUser] = useState('Unknown')
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editPhone, setEditPhone] = useState('')
@@ -93,6 +94,12 @@ export default function LeadModal({
   const [apptTime, setApptTime] = useState('')
   const [apptNotes, setApptNotes] = useState('')
   const [savingAppt, setSavingAppt] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUser(user.user_metadata?.full_name || user.email || 'Unknown')
+    })
+  }, [])
 
   useEffect(() => {
     if (selectedLead) {
@@ -153,7 +160,7 @@ export default function LeadModal({
       appointment_type: apptType,
       appointment_date: dateTime,
       notes: apptNotes || null,
-      created_by: 'Henrry',
+      created_by: currentUser,
     }])
     // Auto-update lead status to appointment_set
     await supabase.from('leads').update({ status: 'appointment_set' }).eq('id', selectedLead.id)

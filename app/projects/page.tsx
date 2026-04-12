@@ -70,6 +70,7 @@ function formatTs(ts: string) {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([])
+  const [currentUser, setCurrentUser] = useState('Unknown')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [showNewProject, setShowNewProject] = useState(false)
@@ -154,7 +155,12 @@ export default function ProjectsPage() {
     setLeads(data || [])
   }
 
-  useEffect(() => { loadProjects(); loadLeads() }, [])
+  useEffect(() => {
+    loadProjects(); loadLeads()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUser(user.user_metadata?.full_name || user.email || 'Unknown')
+    })
+  }, [])
 
   async function selectProject(projectId: string) {
     setSelectedProjectId(projectId)
@@ -202,7 +208,7 @@ export default function ProjectsPage() {
     const now = new Date().toISOString()
     await supabase.from('project_stages').update({ started_at: now }).eq('id', stepId)
     if (selectedProjectId) {
-      await supabase.from('project_daily_logs').insert([{ project_id: selectedProjectId, note: `▶ Stage started: ${stepName}`, created_by: 'Henrry', created_at: now }])
+      await supabase.from('project_daily_logs').insert([{ project_id: selectedProjectId, note: `▶ Stage started: ${stepName}`, created_by: currentUser, created_at: now }])
       loadStages(selectedProjectId); loadLogs(selectedProjectId)
     }
   }
@@ -213,7 +219,7 @@ export default function ProjectsPage() {
     const now = new Date().toISOString()
     await supabase.from('project_stages').update({ completed: true, completed_at: now }).eq('id', stepId)
     if (selectedProjectId) {
-      await supabase.from('project_daily_logs').insert([{ project_id: selectedProjectId, note: `✓ Stage completed: ${stepName}`, created_by: 'Henrry', created_at: now }])
+      await supabase.from('project_daily_logs').insert([{ project_id: selectedProjectId, note: `✓ Stage completed: ${stepName}`, created_by: currentUser, created_at: now }])
       loadStages(selectedProjectId); loadLogs(selectedProjectId)
     }
   }
@@ -239,7 +245,7 @@ export default function ProjectsPage() {
 
   async function addLog() {
     if (!newLog.trim() || !selectedProjectId) return
-    await supabase.from('project_daily_logs').insert([{ project_id: selectedProjectId, note: newLog.trim(), created_by: 'Henrry' }])
+    await supabase.from('project_daily_logs').insert([{ project_id: selectedProjectId, note: newLog.trim(), created_by: currentUser }])
     setNewLog(''); loadLogs(selectedProjectId)
   }
 
@@ -371,7 +377,7 @@ export default function ProjectsPage() {
 
   async function mobileAddLog() {
     if (!mobileNewLog.trim() || !mobileProject) return
-    await supabase.from('project_daily_logs').insert([{ project_id: mobileProject.id, note: mobileNewLog.trim(), created_by: mobileClockEmployee || 'Field' }])
+    await supabase.from('project_daily_logs').insert([{ project_id: mobileProject.id, note: mobileNewLog.trim(), created_by: mobileClockEmployee || currentUser }])
     setMobileNewLog('')
     const { data } = await supabase.from('project_daily_logs').select('*').eq('project_id', mobileProject.id).order('created_at', { ascending: false })
     setMobileLogs(data || [])

@@ -32,6 +32,7 @@ export default function LeadsPage() {
   const [proposals, setProposals] = useState<any[]>([])
   const [serviceOptions, setServiceOptions] = useState<string[]>([])
   const [showAddLead, setShowAddLead] = useState(false)
+  const [currentUser, setCurrentUser] = useState('Unknown')
 
   async function getLeads() {
     const { data } = await supabase.from('leads').select('*')
@@ -55,7 +56,7 @@ export default function LeadsPage() {
 
   async function addNote() {
     if (!noteText || !selectedLead) return
-    await supabase.from('lead_notes').insert([{ lead_id: selectedLead.id, note: noteText, created_by: 'Henrry' }])
+    await supabase.from('lead_notes').insert([{ lead_id: selectedLead.id, note: noteText, created_by: currentUser }])
     setNoteText('')
     getNotes(selectedLead.id)
   }
@@ -88,7 +89,12 @@ export default function LeadsPage() {
     getLeads()
   }
 
-  useEffect(() => { getLeads(); getServiceOptions() }, [])
+  useEffect(() => {
+    getLeads(); getServiceOptions()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUser(user.user_metadata?.full_name || user.email || 'Unknown')
+    })
+  }, [])
 
   const filteredLeads = leads.filter((lead) =>
     (lead.name || '').toLowerCase().includes(search.toLowerCase())
