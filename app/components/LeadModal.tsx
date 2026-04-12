@@ -372,67 +372,68 @@ export default function LeadModal({
             </div>
           )}
 
+        </div>
+
+        {/* Scrollable section */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '0 24px 24px' }}>
+
           {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, paddingTop: 4 }}>
             <button className="hidden md:block" onClick={createProposal} style={{ flex: 1, padding: '10px', borderRadius: 12, background: '#185FA5', color: 'white', fontWeight: 500, fontSize: 13, border: 'none', cursor: 'pointer' }}>
               + Create Proposal
             </button>
-            <button onClick={() => setShowSchedule(!showSchedule)} style={{ flex: 1, padding: '12px 10px', borderRadius: 12, background: showSchedule ? '#FAEEDA' : '#f9f9f9', color: showSchedule ? '#633806' : '#555', fontWeight: 500, fontSize: 14, border: '0.5px solid #e5e5e5', cursor: 'pointer' }}>
+            <button onClick={() => setShowSchedule(!showSchedule)} style={{ flex: 1, padding: '13px 10px', borderRadius: 12, background: showSchedule ? '#FAEEDA' : '#f0f6ff', color: showSchedule ? '#633806' : '#0C447C', fontWeight: 600, fontSize: 14, border: `1.5px solid ${showSchedule ? '#f5c5a3' : '#c5d5e8'}`, cursor: 'pointer' }}>
               📅 Schedule Appointment
             </button>
           </div>
 
-          {/* Schedule Appointment form */}
+          {/* Schedule Appointment form — inside scrollable area */}
           {showSchedule && (
-            <div style={{ background: 'white', borderRadius: 14, padding: '16px', marginBottom: 16, border: '1px solid #e0e0e0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: '#fafafa', borderRadius: 14, padding: '16px', marginBottom: 16, border: '1.5px solid #e0e0e0' }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', margin: '0 0 14px' }}>New Appointment</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Appointment Type</label>
+                  <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>Appointment Type</label>
                   <select value={apptType} onChange={(e) => setApptType(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptType ? '#1a1a2e' : '#888' }}>
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 12px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e', WebkitAppearance: 'none', appearance: 'none' }}>
                     <option value="">— Select type —</option>
                     {APPOINTMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Date</label>
+                  <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>Date</label>
                   <input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptDate ? '#1a1a2e' : '#888' }} />
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 12px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e' }} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div>
-                    <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Start Time</label>
+                    <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>Start Time</label>
                     <input type="time" value={apptTime} onChange={(e) => setApptTime(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptTime ? '#1a1a2e' : '#888' }} />
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 10px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e' }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>End Time</label>
+                    <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>End Time</label>
                     <input type="time" value={apptEndTime} onChange={(e) => setApptEndTime(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', color: apptEndTime ? '#1a1a2e' : '#888' }} />
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 10px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', color: '#1a1a2e' }} />
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: '#555', fontWeight: 500, display: 'block', marginBottom: 6 }}>Notes (optional)</label>
+                  <label style={{ fontSize: 12, color: '#333', fontWeight: 600, display: 'block', marginBottom: 6 }}>Notes (optional)</label>
                   <textarea placeholder="Any notes about this appointment…" value={apptNotes} onChange={(e) => setApptNotes(e.target.value)} rows={2}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 10, border: '1.5px solid #d0d0d0', background: 'white', fontSize: 15, outline: 'none', resize: 'none', lineHeight: 1.5 }} />
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 10, border: '1.5px solid #ccc', background: 'white', fontSize: 16, outline: 'none', resize: 'none', lineHeight: 1.5 }} />
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={scheduleAppointment} disabled={!apptType || !apptDate || !apptTime || savingAppt}
-                    style={{ flex: 1, padding: '12px', borderRadius: 10, background: apptType && apptDate && apptTime ? '#185FA5' : '#f0f0f0', color: apptType && apptDate && apptTime ? 'white' : '#bbb', fontWeight: 600, fontSize: 14, border: 'none', cursor: apptType && apptDate && apptTime ? 'pointer' : 'not-allowed' }}>
+                    style={{ flex: 1, padding: '13px', borderRadius: 10, background: apptType && apptDate && apptTime ? '#185FA5' : '#e0e0e0', color: apptType && apptDate && apptTime ? 'white' : '#aaa', fontWeight: 600, fontSize: 15, border: 'none', cursor: apptType && apptDate && apptTime ? 'pointer' : 'not-allowed' }}>
                     {savingAppt ? 'Saving…' : 'Save Appointment'}
                   </button>
-                  <button onClick={() => setShowSchedule(false)} style={{ padding: '12px 16px', borderRadius: 10, background: '#f5f5f5', color: '#555', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+                  <button onClick={() => setShowSchedule(false)} style={{ padding: '13px 16px', borderRadius: 10, background: 'white', color: '#555', fontSize: 14, fontWeight: 500, border: '1.5px solid #ccc', cursor: 'pointer' }}>
                     Cancel
                   </button>
                 </div>
               </div>
             </div>
           )}
-        </div>
-
-        {/* Scrollable section */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '0 24px 24px' }}>
 
           {/* Appointments */}
           {appointments.length > 0 && (
