@@ -6,6 +6,7 @@ import NavSidebar from '../components/NavSidebar'
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<any[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [newTemplateName, setNewTemplateName] = useState('')
   const [newTemplateDescription, setNewTemplateDescription] = useState('')
@@ -173,7 +174,15 @@ export default function TemplatesPage() {
     getTemplateItems(sectionId)
   }
 
-  useEffect(() => { getTemplates(); getCatalogSections() }, [])
+  useEffect(() => {
+    getTemplates(); getCatalogSections()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        setIsAdmin(data?.role === 'admin')
+      }
+    })
+  }, [])
 
   const inputStyle = { padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' } as React.CSSProperties
 
@@ -207,10 +216,10 @@ export default function TemplatesPage() {
                 <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: selectedTemplateId === t.id ? '#0C447C' : '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
                 {t.description && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</p>}
               </div>
-              <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id) }}
+              {isAdmin && <button onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id) }}
                 style={{ fontSize: 12, color: '#ddd', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', flexShrink: 0, marginLeft: 4 }}
                 onMouseOver={(e) => (e.currentTarget.style.color = '#f09595')}
-                onMouseOut={(e) => (e.currentTarget.style.color = '#ddd')}>✕</button>
+                onMouseOut={(e) => (e.currentTarget.style.color = '#ddd')}>✕</button>}
             </div>
           ))}
         </div>
@@ -265,7 +274,7 @@ export default function TemplatesPage() {
                           <p style={{ fontSize: 12, color: '#aaa', margin: '2px 0 0' }}>{items.length} item{items.length !== 1 ? 's' : ''}</p>
                         </div>
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                          <button onClick={() => deleteTemplateSection(section.id)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>
+                          {isAdmin && <button onClick={() => deleteTemplateSection(section.id)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>}
                           <span style={{ color: '#bbb', fontSize: 13, cursor: 'pointer' }} onClick={() => { if (isExpanded) { setExpandedSectionId(null) } else { setExpandedSectionId(section.id); getTemplateItems(section.id) } }}>{isExpanded ? '▲' : '▼'}</span>
                         </div>
                       </div>
@@ -323,7 +332,7 @@ export default function TemplatesPage() {
                                         <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>{catalogItem?.description}</p>
                                       </div>
                                       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                        <button onClick={() => deleteTemplateItem(item.id, section.id)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>
+                                        {isAdmin && <button onClick={() => deleteTemplateItem(item.id, section.id)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>}
                                         <span style={{ color: '#bbb', fontSize: 12, cursor: 'pointer' }} onClick={() => { if (isItemExpanded) { setExpandedItemId(null) } else { setExpandedItemId(item.id); getTemplateItemRows(item.id, item.catalog_item_id) } }}>{isItemExpanded ? '▲' : '▼'}</span>
                                       </div>
                                     </div>

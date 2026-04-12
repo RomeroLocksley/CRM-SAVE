@@ -6,6 +6,7 @@ import NavSidebar from '../components/NavSidebar'
 
 export default function CatalogPage() {
   const [sections, setSections] = useState<any[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [items, setItems] = useState<any[]>([])
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
@@ -162,7 +163,15 @@ export default function CatalogPage() {
     }
   }
 
-  useEffect(() => { getSections() }, [])
+  useEffect(() => {
+    getSections()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        setIsAdmin(data?.role === 'admin')
+      }
+    })
+  }, [])
 
   const inputStyle = { padding: '8px 10px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none' } as React.CSSProperties
 
@@ -213,10 +222,10 @@ export default function CatalogPage() {
                       style={{ fontSize: 12, color: '#ddd', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 3px' }}
                       onMouseOver={(e) => (e.currentTarget.style.color = '#185FA5')}
                       onMouseOut={(e) => (e.currentTarget.style.color = '#ddd')}>✎</button>
-                    <button onClick={() => deleteSection(section.id)}
+                    {isAdmin && <button onClick={() => deleteSection(section.id)}
                       style={{ fontSize: 12, color: '#ddd', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 3px' }}
                       onMouseOver={(e) => (e.currentTarget.style.color = '#f09595')}
-                      onMouseOut={(e) => (e.currentTarget.style.color = '#ddd')}>✕</button>
+                      onMouseOut={(e) => (e.currentTarget.style.color = '#ddd')}>✕</button>}
                   </div>
                 </div>
               )}
@@ -264,7 +273,7 @@ export default function CatalogPage() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 16, flexShrink: 0 }}>
                         <span style={{ fontSize: 12, color: '#aaa' }}>Unit: {item.unit || '—'}</span>
-                        <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>
+                        {isAdmin && <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>}
                         <span style={{ color: '#bbb', fontSize: 13, cursor: 'pointer' }} onClick={() => toggleItem(item)}>{isExpanded ? '▲' : '▼'}</span>
                       </div>
                     </div>
@@ -325,8 +334,8 @@ export default function CatalogPage() {
                                       style={{ ...inputStyle, padding: '6px 8px', background: 'white' }} />
                                     <button onClick={() => saveCostRowEdits(row.id, item.id)} disabled={!hasRowEdits}
                                       style={{ padding: '6px 8px', borderRadius: 6, background: hasRowEdits ? '#185FA5' : '#f0f0f0', color: hasRowEdits ? 'white' : '#bbb', fontSize: 12, fontWeight: 500, border: 'none', cursor: hasRowEdits ? 'pointer' : 'not-allowed' }}>Save</button>
-                                    <button onClick={() => deleteCostRow(row.id, item.id)}
-                                      style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'right' }}>Delete</button>
+                                    {isAdmin && <button onClick={() => deleteCostRow(row.id, item.id)}
+                                      style={{ fontSize: 12, color: '#f09595', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'right' }}>Delete</button>}
                                   </div>
                                 )
                               })}
