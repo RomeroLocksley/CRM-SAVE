@@ -24,11 +24,11 @@ function MobileNavItem({ href, label, icon }: { href: string; label: string; ico
   const pathname = usePathname()
   const active = pathname === href || (href !== '/' && pathname.startsWith(href))
   return (
-    <Link href={href} style={{ textDecoration: 'none', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 0' }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'rgba(255,255,255,0.2)' : 'transparent' }}>
+    <Link href={href} style={{ textDecoration: 'none', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '10px 0' }}>
+      <div style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'rgba(255,255,255,0.2)' : 'transparent' }}>
         {icon}
       </div>
-      <span style={{ fontSize: 10, color: active ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: active ? 500 : 400 }}>{label}</span>
+      <span style={{ fontSize: 11, color: active ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: active ? 500 : 400 }}>{label}</span>
     </Link>
   )
 }
@@ -37,7 +37,7 @@ const NAV_ITEMS = [
   {
     href: '/', label: 'Home',
     icon: (active: boolean) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
         <path d="M2 7.5L9 2l7 5.5V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5z" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5" strokeLinejoin="round"/>
         <rect x="6.5" y="10" width="5" height="7" rx="0.5" fill={active ? 'white' : 'rgba(255,255,255,0.6)'}/>
       </svg>
@@ -46,7 +46,7 @@ const NAV_ITEMS = [
   {
     href: '/leads', label: 'Leads',
     icon: (active: boolean) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
         <circle cx="9" cy="6" r="3.5" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <path d="M2 16c0-3.866 3.134-6 7-6s7 2.134 7 6" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
@@ -55,7 +55,7 @@ const NAV_ITEMS = [
   {
     href: '/lead-calendar', label: 'Lead Cal',
     icon: (active: boolean) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
         <rect x="1" y="3" width="16" height="14" rx="1.5" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <path d="M1 7h16" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <path d="M5 1v4M13 1v4" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5" strokeLinecap="round"/>
@@ -66,7 +66,7 @@ const NAV_ITEMS = [
   {
     href: '/projects', label: 'Projects',
     icon: (active: boolean) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
         <rect x="1" y="5" width="16" height="11" rx="1.5" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <path d="M6 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <path d="M1 9h16" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
@@ -76,7 +76,7 @@ const NAV_ITEMS = [
   {
     href: '/calendar', label: 'Prod Cal',
     icon: (active: boolean) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
         <rect x="1" y="3" width="16" height="14" rx="1.5" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <path d="M1 7h16" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <path d="M5 1v4M13 1v4" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5" strokeLinecap="round"/>
@@ -87,7 +87,7 @@ const NAV_ITEMS = [
   {
     href: '/catalog', label: 'Catalog',
     icon: (active: boolean) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
         <path d="M3 4h12M3 9h12M3 14h7" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     )
@@ -95,7 +95,7 @@ const NAV_ITEMS = [
   {
     href: '/templates', label: 'Templates',
     icon: (active: boolean) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
         <rect x="1" y="1" width="16" height="5" rx="1.5" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <rect x="1" y="9" width="7" height="8" rx="1.5" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
         <rect x="10" y="9" width="7" height="8" rx="1.5" stroke={active ? 'white' : 'rgba(255,255,255,0.6)'} strokeWidth="1.5"/>
@@ -175,7 +175,7 @@ export default function NavSidebar() {
       </aside>
 
       {/* ── MOBILE BOTTOM NAV ───────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center print:hidden" style={{ background: '#0C447C', borderTop: '1px solid rgba(255,255,255,0.1)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center print:hidden" style={{ background: '#0C447C', borderTop: '1px solid rgba(255,255,255,0.1)', paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 4 }}>
         {mobileItems.map((item) => {
           const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
           return (
