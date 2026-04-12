@@ -45,6 +45,29 @@ type LeadInfo = {
   address: string
 }
 
+type CatalogSection = {
+  id: string
+  name: string
+}
+
+type CatalogItem = {
+  id: string
+  section_id: string
+  name: string
+  description: string
+  unit: string
+  cost_rows: CatalogCostRow[]
+}
+
+type CatalogCostRow = {
+  id: string
+  item_id: string
+  name: string
+  quantity: number
+  unit: string
+  unit_cost: number
+}
+
 function toNumericOrNull(value: any): number | null {
   if (value === '' || value === null || value === undefined) return null
   const n = Number(value)
@@ -249,6 +272,21 @@ function ProposalBuilder() {
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
 
+  // ─── Catalog modal state ───────────────────────────────────────────────────
+  const [showAddSection, setShowAddSection] = useState(false)
+  const [showAddItem, setShowAddItem] = useState(false)
+  const [catalogSections, setCatalogSections] = useState<CatalogSection[]>([])
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
+  const [addItemStep, setAddItemStep] = useState<1 | 2>(1)
+  const [selectedCatalogSection, setSelectedCatalogSection] = useState<CatalogSection | null>(null)
+  const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null)
+  const [targetProposalSectionId, setTargetProposalSectionId] = useState<string>('')
+  const [showCustomItem, setShowCustomItem] = useState(false)
+  const [customItemName, setCustomItemName] = useState('')
+  const [customItemDesc, setCustomItemDesc] = useState('')
+  const [customItemQty, setCustomItemQty] = useState('')
+  const [customItemUnit, setCustomItemUnit] = useState('')
+
   async function loadProposal() {
     if (!proposalId) return
     const { data: proposalData } = await supabase.from('proposals').select('title, status').eq('id', proposalId).single()
@@ -274,7 +312,19 @@ function ProposalBuilder() {
     setTemplates(data || [])
   }
 
-  useEffect(() => { loadProposal(); loadTemplates() }, [proposalId])
+  async function loadCatalog() {
+    const { data: sections } = await supabase.from('catalog_sections').select('*').order('created_at', { ascending: true })
+    setCatalogSections(sections || [])
+    const { data: items } = await supabase.from('catalog_items').select('*').order('created_at', { ascending: true })
+    const { data: costRows } = await supabase.from('catalog_cost_rows').select('*').order('created_at', { ascending: true })
+    const itemsWithRows = (items || []).map((item: any) => ({
+      ...item,
+      cost_rows: (costRows || []).filter((r: any) => r.item_id === item.id)
+    }))
+    setCatalogItems(itemsWithRows)
+  }
+
+  useEffect(() => { loadProposal(); loadTemplates(); loadCatalog() }, [proposalId])
 
   // ─── Add / Delete helpers ──────────────────────────────────────────────────
 
@@ -346,6 +396,77 @@ function ProposalBuilder() {
         ...item, rows: item.rows.map((row, ri) => ri !== rowIndex ? row : { ...row, [field]: value })
       })
     }))
+    markDirty()
+  }
+
+  function openAddSection() {
+    setShowAddSection(true)
+  }
+
+  function addSectionFromCatalog(catalogSection: CatalogSection) {
+    const existing = sections.find((s) => s.name === catalogSection.name)
+    if (existing) { alert(`Section "${catalogSection.name}" is already in this proposal.`); return }
+    const newSection: ProposalSection = {
+      id: crypto.randomUUID(), proposal_id: proposalId!, name: catalogSection.name, items: []
+    }
+    setSections((prev) => [...prev, newSection])
+    setShowAddSection(false)
+    markDirty()
+  }
+
+  function openAddItem() {
+    setAddItemStep(1)
+    setSelectedCatalogSection(null)
+    setSelectedCatalogItem(null)
+    setTargetProposalSectionId(sections.length > 0 ? sections[0].id : '')
+    setShowCustomItem(false)
+    setCustomItemName(''); setCustomItemDesc(''); setCustomItemQty(''); setCustomItemUnit('')
+    setShowAddItem(true)
+  }
+
+  function addItemFromCatalog() {
+    if (!selectedCatalogItem || !targetProposalSectionId) return
+    const newItem: ProposalItem = {
+      id: crypto.randomUUID(),
+      section_id: targetProposalSectionId,
+      proposal_id: proposalId!,
+      name: selectedCatalogItem.name,
+      description: selectedCatalogItem.description || '',
+      display_quantity: '',
+      display_unit: selectedCatalogItem.unit || '',
+      rows: selectedCatalogItem.cost_rows.map((cr) => ({
+        id: crypto.randomUUID(),
+        item_id: '', // will be set on save via upsert
+        proposal_id: proposalId!,
+        name: cr.name,
+        quantity: cr.quantity,
+        unit: cr.unit,
+        unit_cost: cr.unit_cost,
+      }))
+    }
+    setSections((prev) => prev.map((s) =>
+      s.id !== targetProposalSectionId ? s : { ...s, items: [...s.items, newItem] }
+    ))
+    setShowAddItem(false)
+    markDirty()
+  }
+
+  function addCustomItem() {
+    if (!customItemName.trim() || !targetProposalSectionId) return
+    const newItem: ProposalItem = {
+      id: crypto.randomUUID(),
+      section_id: targetProposalSectionId,
+      proposal_id: proposalId!,
+      name: customItemName.trim(),
+      description: customItemDesc.trim(),
+      display_quantity: customItemQty,
+      display_unit: customItemUnit,
+      rows: []
+    }
+    setSections((prev) => prev.map((s) =>
+      s.id !== targetProposalSectionId ? s : { ...s, items: [...s.items, newItem] }
+    ))
+    setShowAddItem(false)
     markDirty()
   }
 
@@ -633,7 +754,7 @@ function ProposalBuilder() {
             {sections.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-gray-400 mb-4">No sections yet. Load a template above or add a section manually.</p>
-                <button onClick={addSection} className="px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
+                <button onClick={openAddSection} className="px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
                   + Add Section
                 </button>
               </div>
@@ -709,31 +830,21 @@ function ProposalBuilder() {
                                 const rowTotal = Number(row.quantity || 0) * Number(row.unit_cost || 0)
                                 return (
                                   <div key={row.id} className="grid gap-3 items-center bg-gray-50 rounded-lg px-3 py-2" style={{ gridTemplateColumns: '1fr 80px 80px 100px 100px 60px' }}>
-                                    <input className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                      value={row.name || ''} onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'name', e.target.value)} />
+                                    <p className="text-sm text-gray-600 truncate">{row.name}</p>
                                     <input type="number" className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
                                       value={row.quantity === 0 || row.quantity === '0' ? '' : row.quantity || ''} placeholder="0"
                                       onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'quantity', e.target.value)} />
-                                    <input className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                      value={row.unit || ''} onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'unit', e.target.value)} />
-                                    <input type="number" className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                      value={row.unit_cost || ''} placeholder="0.00"
-                                      onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'unit_cost', e.target.value)} />
+                                    <p className="text-sm text-gray-500">{row.unit || '—'}</p>
+                                    <p className="text-sm text-gray-500">${Number(row.unit_cost || 0).toFixed(2)}</p>
                                     <p className="text-sm font-medium text-right">${rowTotal.toFixed(2)}</p>
-                                    <button onClick={() => deleteCostRow(sIndex, iIndex, row.id)}
-                                      className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
-                                      ✕
-                                    </button>
+                                    <div />
                                   </div>
                                 )
                               })}
                             </div>
                           </>
                         )}
-                        <button onClick={() => addCostRow(sIndex, iIndex)}
-                          className="mt-3 text-xs text-blue-500 hover:text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors">
-                          + Add Cost Row
-                        </button>
+
                       </div>
 
                       <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
@@ -745,20 +856,20 @@ function ProposalBuilder() {
                   )
                 })}
 
-                {/* Add Item button */}
-                <button onClick={() => addItem(sIndex)}
-                  className="text-sm text-blue-500 hover:text-blue-700 px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors">
-                  + Add Item to {section.name}
-                </button>
+
               </div>
             ))}
 
             {/* Add Section button — always visible when there are sections */}
             {sections.length > 0 && (
               <div className="mt-6">
-                <button onClick={addSection}
+                <button onClick={openAddSection}
                   className="px-5 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200">
                   + Add Section
+                </button>
+                <button onClick={openAddItem}
+                  className="px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                  + Add Item
                 </button>
               </div>
             )}
@@ -775,6 +886,162 @@ function ProposalBuilder() {
           </div>
         )}
       </div>
+      {/* ── ADD SECTION MODAL ──────────────────────────────────────────────── */}
+      {showAddSection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAddSection(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-base font-semibold text-gray-800">Add Section from Catalog</p>
+              <button onClick={() => setShowAddSection(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {catalogSections.length === 0 ? (
+                <p className="text-sm text-gray-400 p-4 text-center">No catalog sections found.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {catalogSections.map((cs) => {
+                    const alreadyAdded = sections.some((s) => s.name === cs.name)
+                    return (
+                      <button key={cs.id} onClick={() => !alreadyAdded && addSectionFromCatalog(cs)}
+                        disabled={alreadyAdded}
+                        className={`text-left px-4 py-3 rounded-xl border transition-colors ${alreadyAdded ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'}`}>
+                        <p className="text-sm font-medium">{cs.name}</p>
+                        {alreadyAdded && <p className="text-xs text-gray-300 mt-0.5">Already in proposal</p>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD ITEM MODAL ───────────────────────────────────────────────────── */}
+      {showAddItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAddItem(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="text-base font-semibold text-gray-800">
+                  {showCustomItem ? 'Custom Item' : addItemStep === 1 ? 'Select Item from Catalog' : 'Choose Proposal Section'}
+                </p>
+                {!showCustomItem && addItemStep === 2 && selectedCatalogItem && (
+                  <p className="text-sm text-gray-400 mt-0.5">Adding: {selectedCatalogItem.name}</p>
+                )}
+              </div>
+              <button onClick={() => setShowAddItem(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+
+            {/* Step 1 — pick catalog section then item */}
+            {!showCustomItem && addItemStep === 1 && (
+              <div className="p-4 max-h-[70vh] overflow-y-auto">
+                {catalogSections.map((cs) => {
+                  const items = catalogItems.filter((i) => i.section_id === cs.id)
+                  if (items.length === 0) return null
+                  return (
+                    <div key={cs.id} className="mb-4">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">{cs.name}</p>
+                      <div className="flex flex-col gap-1">
+                        {items.map((ci) => (
+                          <button key={ci.id}
+                            onClick={() => { setSelectedCatalogItem(ci); setSelectedCatalogSection(cs); setAddItemStep(2); setTargetProposalSectionId(sections.length > 0 ? sections[0].id : '') }}
+                            className="text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                            <p className="text-sm font-medium text-gray-700">{ci.name}</p>
+                            {ci.description && <p className="text-xs text-gray-400 mt-0.5 truncate">{ci.description}</p>}
+                            <p className="text-xs text-gray-400 mt-0.5">{ci.cost_rows.length} cost row{ci.cost_rows.length !== 1 ? 's' : ''}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="border-t border-gray-100 mt-4 pt-4">
+                  <button onClick={() => { setShowCustomItem(true); setTargetProposalSectionId(sections.length > 0 ? sections[0].id : '') }}
+                    className="w-full text-left px-4 py-3 rounded-xl border border-dashed border-gray-300 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm font-medium text-gray-500">
+                    + Custom Item (not from catalog)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 — pick proposal section */}
+            {!showCustomItem && addItemStep === 2 && (
+              <div className="p-6">
+                <p className="text-sm text-gray-600 mb-4">Which section should this item go into?</p>
+                {sections.length === 0 ? (
+                  <p className="text-sm text-gray-400">No sections in this proposal yet. Add a section first.</p>
+                ) : (
+                  <div className="flex flex-col gap-2 mb-6">
+                    {sections.map((s) => (
+                      <button key={s.id} onClick={() => setTargetProposalSectionId(s.id)}
+                        className={`text-left px-4 py-3 rounded-xl border transition-colors ${targetProposalSectionId === s.id ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300 text-gray-700'}`}>
+                        <p className="text-sm font-medium">{s.name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <button onClick={() => setAddItemStep(1)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                    ← Back
+                  </button>
+                  <button onClick={addItemFromCatalog} disabled={!targetProposalSectionId || sections.length === 0}
+                    className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${targetProposalSectionId && sections.length > 0 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                    Add Item
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Custom item form */}
+            {showCustomItem && (
+              <div className="p-6">
+                <div className="flex flex-col gap-3 mb-4">
+                  <div>
+                    <label className="text-xs text-gray-400 block mb-1">Item Name *</label>
+                    <input value={customItemName} onChange={(e) => setCustomItemName(e.target.value)} placeholder="e.g. Custom Accessory"
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 block mb-1">Description</label>
+                    <input value={customItemDesc} onChange={(e) => setCustomItemDesc(e.target.value)} placeholder="Optional description"
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">Qty</label>
+                      <input type="number" value={customItemQty} onChange={(e) => setCustomItemQty(e.target.value)} placeholder="0"
+                        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">Unit</label>
+                      <input value={customItemUnit} onChange={(e) => setCustomItemUnit(e.target.value)} placeholder="e.g. ea"
+                        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 block mb-1">Add to Section</label>
+                    <select value={targetProposalSectionId} onChange={(e) => setTargetProposalSectionId(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                      {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowCustomItem(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                    ← Back
+                  </button>
+                  <button onClick={addCustomItem} disabled={!customItemName.trim()}
+                    className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${customItemName.trim() ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                    Add Custom Item
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
