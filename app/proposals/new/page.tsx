@@ -277,7 +277,7 @@ function ProposalBuilder() {
   const [showAddItem, setShowAddItem] = useState(false)
   const [catalogSections, setCatalogSections] = useState<CatalogSection[]>([])
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
-  const [addItemStep, setAddItemStep] = useState<1 | 2>(1)
+  const [addItemStep, setAddItemStep] = useState<1 | 2 | 3>(1)
   const [selectedCatalogSection, setSelectedCatalogSection] = useState<CatalogSection | null>(null)
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null)
   const [targetProposalSectionId, setTargetProposalSectionId] = useState<string>('')
@@ -924,51 +924,62 @@ function ProposalBuilder() {
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <p className="text-base font-semibold text-gray-800">
-                  {showCustomItem ? 'Custom Item' : addItemStep === 1 ? 'Select Item from Catalog' : 'Choose Proposal Section'}
+                  {showCustomItem ? 'Custom Item' : addItemStep === 1 ? 'Step 1 — Catalog Section' : addItemStep === 2 ? 'Step 2 — Select Item' : 'Step 3 — Proposal Section'}
                 </p>
-                {!showCustomItem && addItemStep === 2 && selectedCatalogItem && (
-                  <p className="text-sm text-gray-400 mt-0.5">Adding: {selectedCatalogItem.name}</p>
-                )}
+                <p className="text-xs text-gray-400 mt-0.5">Step {showCustomItem ? '—' : addItemStep} of {showCustomItem ? '—' : 3}</p>
               </div>
               <button onClick={() => setShowAddItem(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
             </div>
 
-            {/* Step 1 — pick catalog section then item */}
+            {/* Step 1 — pick a catalog section */}
             {!showCustomItem && addItemStep === 1 && (
-              <div className="p-4 max-h-[70vh] overflow-y-auto">
-                {catalogSections.map((cs) => {
-                  const items = catalogItems.filter((i) => i.section_id === cs.id)
-                  if (items.length === 0) return null
-                  return (
-                    <div key={cs.id} className="mb-4">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">{cs.name}</p>
-                      <div className="flex flex-col gap-1">
-                        {items.map((ci) => (
-                          <button key={ci.id}
-                            onClick={() => { setSelectedCatalogItem(ci); setSelectedCatalogSection(cs); setAddItemStep(2); setTargetProposalSectionId(sections.length > 0 ? sections[0].id : '') }}
-                            className="text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
-                            <p className="text-sm font-medium text-gray-700">{ci.name}</p>
-                            {ci.description && <p className="text-xs text-gray-400 mt-0.5 truncate">{ci.description}</p>}
-                            <p className="text-xs text-gray-400 mt-0.5">{ci.cost_rows.length} cost row{ci.cost_rows.length !== 1 ? 's' : ''}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
-                <div className="border-t border-gray-100 mt-4 pt-4">
-                  <button onClick={() => { setShowCustomItem(true); setTargetProposalSectionId(sections.length > 0 ? sections[0].id : '') }}
-                    className="w-full text-left px-4 py-3 rounded-xl border border-dashed border-gray-300 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm font-medium text-gray-500">
-                    + Custom Item (not from catalog)
-                  </button>
+              <div className="p-4 max-h-[60vh] overflow-y-auto">
+                <p className="text-xs text-gray-400 mb-3 px-1">Which catalog section do you want to pull from?</p>
+                <div className="flex flex-col gap-2">
+                  {catalogSections.filter((cs) => catalogItems.some((i) => i.section_id === cs.id)).map((cs) => (
+                    <button key={cs.id}
+                      onClick={() => { setSelectedCatalogSection(cs); setAddItemStep(2) }}
+                      className="text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                      <p className="text-sm font-medium text-gray-700">{cs.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{catalogItems.filter((i) => i.section_id === cs.id).length} items</p>
+                    </button>
+                  ))}
+                  <div className="border-t border-gray-100 mt-2 pt-2">
+                    <button onClick={() => { setShowCustomItem(true); setTargetProposalSectionId(sections.length > 0 ? sections[0].id : '') }}
+                      className="w-full text-left px-4 py-3 rounded-xl border border-dashed border-gray-300 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm font-medium text-gray-500">
+                      + Custom Item (not from catalog)
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Step 2 — pick proposal section */}
-            {!showCustomItem && addItemStep === 2 && (
+            {/* Step 2 — pick item from selected catalog section */}
+            {!showCustomItem && addItemStep === 2 && selectedCatalogSection && (
+              <div className="p-4 max-h-[60vh] overflow-y-auto">
+                <p className="text-xs text-gray-400 mb-3 px-1">Select an item from <strong>{selectedCatalogSection.name}</strong></p>
+                <div className="flex flex-col gap-2">
+                  {catalogItems.filter((i) => i.section_id === selectedCatalogSection.id).map((ci) => (
+                    <button key={ci.id}
+                      onClick={() => { setSelectedCatalogItem(ci); setAddItemStep(3); setTargetProposalSectionId(sections.length > 0 ? sections[0].id : '') }}
+                      className="text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                      <p className="text-sm font-medium text-gray-700">{ci.name}</p>
+                      {ci.description && <p className="text-xs text-gray-400 mt-0.5 truncate">{ci.description}</p>}
+                      <p className="text-xs text-gray-400 mt-0.5">{ci.cost_rows.length} cost row{ci.cost_rows.length !== 1 ? 's' : ''}</p>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <button onClick={() => setAddItemStep(1)} className="text-sm text-gray-400 hover:text-gray-600">← Back</button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3 — pick which proposal section to add to */}
+            {!showCustomItem && addItemStep === 3 && selectedCatalogItem && (
               <div className="p-6">
-                <p className="text-sm text-gray-600 mb-4">Which section should this item go into?</p>
+                <p className="text-sm text-gray-600 mb-1">Adding: <strong>{selectedCatalogItem.name}</strong></p>
+                <p className="text-sm text-gray-600 mb-4">Which proposal section should it go into?</p>
                 {sections.length === 0 ? (
                   <p className="text-sm text-gray-400">No sections in this proposal yet. Add a section first.</p>
                 ) : (
@@ -982,7 +993,7 @@ function ProposalBuilder() {
                   </div>
                 )}
                 <div className="flex gap-3">
-                  <button onClick={() => setAddItemStep(1)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  <button onClick={() => setAddItemStep(2)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
                     ← Back
                   </button>
                   <button onClick={addItemFromCatalog} disabled={!targetProposalSectionId || sections.length === 0}
