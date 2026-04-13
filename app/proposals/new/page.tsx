@@ -686,8 +686,9 @@ function ProposalBuilder() {
             <input
               className="text-xl font-semibold bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-1 py-0.5 transition-colors w-64"
               value={proposalTitle}
-              onChange={(e) => { setProposalTitle(e.target.value); markDirty() }}
+              onChange={(e) => { if (proposalStatus !== 'signed') { setProposalTitle(e.target.value); markDirty() } }}
               placeholder="Proposal name"
+              readOnly={proposalStatus === 'signed'}
             />
             <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${statusColors[proposalStatus] || statusColors.draft}`}>
               {proposalStatus}
@@ -704,10 +705,12 @@ function ProposalBuilder() {
               {saveStatus === 'saved' && '✓ Saved'}{saveStatus === 'unsaved' && '● Unsaved changes'}{saveStatus === 'saving' && 'Saving…'}{saveStatus === 'error' && '✕ Save failed'}
             </span>
 
-            <button onClick={saveProposal} disabled={isSaving || !isDirty}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${isDirty && !isSaving ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-              {isSaving ? 'Saving…' : 'Save'}
-            </button>
+            {proposalStatus !== 'signed' && (
+              <button onClick={saveProposal} disabled={isSaving || !isDirty}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${isDirty && !isSaving ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                {isSaving ? 'Saving…' : 'Save'}
+              </button>
+            )}
 
             {proposalStatus !== 'signed' && (
               <button onClick={sendForSignature} disabled={isSending || sections.length === 0}
@@ -733,6 +736,17 @@ function ProposalBuilder() {
 
         {activeTab === 'builder' && (
           <div className="flex-1 overflow-y-auto p-10">
+
+            {/* Signed lock banner */}
+            {proposalStatus === 'signed' && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+                <span className="text-green-600 text-xl">✓</span>
+                <div>
+                  <p className="text-sm font-semibold text-green-800">This proposal has been signed</p>
+                  <p className="text-xs text-green-600">It is locked and cannot be edited. Switch to Preview to view or print it.</p>
+                </div>
+              </div>
+            )}
 
             {/* Load template */}
             <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8 shadow-sm">
@@ -768,12 +782,15 @@ function ProposalBuilder() {
                   <input
                     className="text-sm font-semibold text-gray-600 uppercase tracking-wide bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-400 focus:outline-none px-1 py-0.5 flex-1"
                     value={section.name}
-                    onChange={(e) => updateSectionName(sIndex, e.target.value)}
+                    onChange={(e) => { if (proposalStatus !== 'signed') updateSectionName(sIndex, e.target.value) }}
+                    readOnly={proposalStatus === 'signed'}
                   />
-                  <button onClick={() => deleteSection(section.id)}
-                    className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
-                    Delete Section
-                  </button>
+                  {proposalStatus !== 'signed' && (
+                    <button onClick={() => deleteSection(section.id)}
+                      className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                      Delete Section
+                    </button>
+                  )}
                 </div>
 
                 {section.items.map((item, iIndex) => {
@@ -860,9 +877,9 @@ function ProposalBuilder() {
               </div>
             ))}
 
-            {/* Add Section button — always visible when there are sections */}
-            {sections.length > 0 && (
-              <div className="mt-6">
+            {/* Add Section and Add Item buttons — hidden when signed */}
+            {sections.length > 0 && proposalStatus !== 'signed' && (
+              <div className="mt-6 flex gap-3">
                 <button onClick={openAddSection}
                   className="px-5 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200">
                   + Add Section
