@@ -183,7 +183,6 @@ export async function POST(req: NextRequest) {
     formData.append('signers[0][name]', lead.name)
     formData.append('signers[0][order]', '0')
     formData.append('files[0]', new Blob([htmlContent], { type: 'text/html' }), 'proposal.html')
-    formData.append('test_mode', '1') // Remove this when going live
 
     const response = await fetch('https://api.hellosign.com/v3/signature_request/send', {
       method: 'POST',
