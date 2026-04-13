@@ -748,8 +748,8 @@ function ProposalBuilder() {
               </div>
             )}
 
-            {/* Load template */}
-            <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8 shadow-sm">
+            {/* Load template — hidden when signed */}
+            {proposalStatus !== 'signed' && <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8 shadow-sm">
               <p className="text-sm font-medium text-gray-600 mb-3">Load a template</p>
               <div className="flex items-center gap-3">
                 <select className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
@@ -763,7 +763,7 @@ function ProposalBuilder() {
                 </button>
               </div>
               {templateError && <p className="mt-3 text-sm text-red-500">{templateError}</p>}
-            </div>
+            </div>}
 
             {sections.length === 0 && (
               <div className="text-center py-12">
@@ -801,32 +801,34 @@ function ProposalBuilder() {
                       {/* Item header with delete */}
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-medium text-gray-400 uppercase">Display (customer-facing)</p>
-                        <button onClick={() => deleteItem(sIndex, item.id)}
-                          className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
-                          Delete Item
-                        </button>
+                        {proposalStatus !== 'signed' && (
+                          <button onClick={() => deleteItem(sIndex, item.id)}
+                            className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                            Delete Item
+                          </button>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-4 gap-3 mb-4">
                         <div>
                           <label className="text-xs text-gray-400 block mb-1">Name</label>
-                          <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            value={item.name || ''} onChange={(e) => updateItem(sIndex, iIndex, 'name', e.target.value)} />
+                          <input className={`w-full border rounded-lg px-3 py-2 text-sm ${proposalStatus === 'signed' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-blue-300'}`}
+                            value={item.name || ''} onChange={(e) => { if (proposalStatus !== 'signed') updateItem(sIndex, iIndex, 'name', e.target.value) }} readOnly={proposalStatus === 'signed'} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-400 block mb-1">Description</label>
-                          <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            value={item.description || ''} onChange={(e) => updateItem(sIndex, iIndex, 'description', e.target.value)} />
+                          <input className={`w-full border rounded-lg px-3 py-2 text-sm ${proposalStatus === 'signed' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-blue-300'}`}
+                            value={item.description || ''} onChange={(e) => { if (proposalStatus !== 'signed') updateItem(sIndex, iIndex, 'description', e.target.value) }} readOnly={proposalStatus === 'signed'} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-400 block mb-1">Qty</label>
-                          <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            value={item.display_quantity || ''} onChange={(e) => updateItem(sIndex, iIndex, 'display_quantity', e.target.value)} />
+                          <input type="number" className={`w-full border rounded-lg px-3 py-2 text-sm ${proposalStatus === 'signed' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-blue-300'}`}
+                            value={item.display_quantity || ''} onChange={(e) => { if (proposalStatus !== 'signed') updateItem(sIndex, iIndex, 'display_quantity', e.target.value) }} readOnly={proposalStatus === 'signed'} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-400 block mb-1">Unit</label>
-                          <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            value={item.display_unit || ''} onChange={(e) => updateItem(sIndex, iIndex, 'display_unit', e.target.value)} />
+                          <input className={`w-full border rounded-lg px-3 py-2 text-sm ${proposalStatus === 'signed' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'focus:outline-none focus:ring-2 focus:ring-blue-300'}`}
+                            value={item.display_unit || ''} onChange={(e) => { if (proposalStatus !== 'signed') updateItem(sIndex, iIndex, 'display_unit', e.target.value) }} readOnly={proposalStatus === 'signed'} />
                         </div>
                       </div>
 
@@ -848,9 +850,10 @@ function ProposalBuilder() {
                                 return (
                                   <div key={row.id} className="grid gap-3 items-center bg-gray-50 rounded-lg px-3 py-2" style={{ gridTemplateColumns: '1fr 80px 80px 100px 100px 60px' }}>
                                     <p className="text-sm text-gray-600 truncate">{row.name}</p>
-                                    <input type="number" className="border rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                    <input type="number" className={`border rounded-lg px-2 py-1.5 text-sm ${proposalStatus === 'signed' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white focus:outline-none focus:ring-2 focus:ring-blue-300'}`}
                                       value={row.quantity === 0 || row.quantity === '0' ? '' : row.quantity || ''} placeholder="0"
-                                      onChange={(e) => updateRow(sIndex, iIndex, rIndex, 'quantity', e.target.value)} />
+                                      onChange={(e) => { if (proposalStatus !== 'signed') updateRow(sIndex, iIndex, rIndex, 'quantity', e.target.value) }}
+                                      readOnly={proposalStatus === 'signed'} />
                                     <p className="text-sm text-gray-500">{row.unit || '—'}</p>
                                     <p className="text-sm text-gray-500">${Number(row.unit_cost || 0).toFixed(2)}</p>
                                     <p className="text-sm font-medium text-right">${rowTotal.toFixed(2)}</p>
