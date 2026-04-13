@@ -176,6 +176,7 @@ export async function POST(req: NextRequest) {
 
     // ─── Send to Dropbox Sign ──────────────────────────────────────────────
     const formData = new FormData()
+    formData.append('test_mode', '1') // Remove when upgrading to paid Dropbox Sign plan
     formData.append('title', proposal.title || 'Proposal')
     formData.append('subject', `Please review and sign: ${proposal.title || 'Proposal'}`)
     formData.append('message', `Hi ${lead.name}, please review and sign your proposal from K&D Contracting LLC.`)
