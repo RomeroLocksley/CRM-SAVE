@@ -180,11 +180,12 @@ export default function ProjectsPage() {
       const { data: prop } = await supabase.from('proposals').select('total_price').eq('id', selectedProposalId).single()
       budget = prop?.total_price || null
     }
-    // Auto-assign next project number
-    const { data: existingProjects } = await supabase.from('projects').select('project_number').order('project_number', { ascending: false }).limit(1)
-    const nextNumber = existingProjects && existingProjects.length > 0 && existingProjects[0].project_number
-      ? existingProjects[0].project_number + 1
-      : 1
+    // Auto-assign next project number — find max across all projects
+    const { data: existingProjects } = await supabase.from('projects').select('project_number')
+    const maxNumber = existingProjects && existingProjects.length > 0
+      ? Math.max(0, ...existingProjects.map((p: any) => Number(p.project_number) || 0))
+      : 0
+    const nextNumber = maxNumber + 1
     const { data: newProject, error } = await supabase.from('projects').insert([{
       name: newProjectName.trim(), lead_id: selectedLeadId || null,
       proposal_id: selectedProposalId || null, service: newProjectService || null,
@@ -1035,8 +1036,11 @@ export default function ProjectsPage() {
                     // Auto-generate name: nextNumber - LastName
                     const lead = leads.find((l: any) => l.id === leadId)
                     const lastName = lead?.name?.split(' ').pop() || lead?.name || ''
-                    const { data: existing } = await supabase.from('projects').select('project_number').order('project_number', { ascending: false }).limit(1)
-                    const nextNum = existing && existing.length > 0 && existing[0].project_number ? existing[0].project_number + 1 : 1
+                    const { data: existing } = await supabase.from('projects').select('project_number')
+                    const maxNum = existing && existing.length > 0
+                      ? Math.max(0, ...existing.map((p: any) => Number(p.project_number) || 0))
+                      : 0
+                    const nextNum = maxNum + 1
                     setNewProjectName(`${nextNum} - ${lastName}`)
                   }
                 }} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }}>
