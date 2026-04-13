@@ -30,6 +30,7 @@ export default function LeadCalendarPage() {
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
   const [selectedAppt, setSelectedAppt] = useState<any | null>(null)
   const [editNotes, setEditNotes] = useState('')
+  const [notesSaved, setNotesSaved] = useState(false)
   const [mobileView, setMobileView] = useState<'calendar' | 'list'>('list')
 
   useEffect(() => { loadAll() }, [])
@@ -80,6 +81,8 @@ export default function LeadCalendarPage() {
   async function saveApptNotes(apptId: string) {
     await supabase.from('lead_appointments').update({ notes: editNotes }).eq('id', apptId)
     setSelectedAppt((prev: any) => ({ ...prev, notes: editNotes }))
+    setNotesSaved(true)
+    setTimeout(() => setNotesSaved(false), 2000)
     loadAll()
   }
 
@@ -278,8 +281,9 @@ export default function LeadCalendarPage() {
               <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 6, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Notes</label>
               <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} placeholder="Add notes…"
                 style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 10, border: '0.5px solid #e5e5e5', background: '#fafafa', fontSize: 13, outline: 'none', resize: 'none', lineHeight: 1.5 }} />
-              <button onClick={() => saveApptNotes(selectedAppt.id)} style={{ marginTop: 8, padding: '7px 14px', borderRadius: 8, background: '#185FA5', color: 'white', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
-                Save Notes
+              <button onClick={() => saveApptNotes(selectedAppt.id)}
+                style={{ marginTop: 8, padding: '7px 14px', borderRadius: 8, background: notesSaved ? '#27500A' : '#185FA5', color: 'white', fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
+                {notesSaved ? '✓ Saved' : 'Save Notes'}
               </button>
             </div>
 
