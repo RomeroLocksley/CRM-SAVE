@@ -461,7 +461,10 @@ export default function LeadModal({
                       </div>
                       {!appt.completed && (
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button onClick={() => markApptComplete(appt.id)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: '#EAF3DE', color: '#27500A', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Done</button>
+                          <button onClick={() => markApptComplete(appt.id)}
+                            style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: appt.completed ? '#EAF3DE' : 'transparent', color: appt.completed ? '#27500A' : '#aaa', border: `1px solid ${appt.completed ? '#c0dd97' : '#ddd'}`, cursor: 'pointer', fontWeight: 500, transition: 'all 0.15s' }}>
+                            {appt.completed ? '✓ Done' : 'Done'}
+                          </button>
                           {!appt.rescheduled && <button onClick={() => rescheduleAppt(appt.id)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: '#FAEEDA', color: '#633806', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Reschedule</button>}
                           <button onClick={() => deleteAppt(appt.id)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: '#fff5f5', color: '#c0392b', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Delete</button>
                         </div>
