@@ -164,7 +164,10 @@ export default function LeadModal({
   }
 
   async function createProposal() {
-    const { data, error } = await supabase.from('proposals').insert([{ lead_id: selectedLead.id, title: 'New Proposal' }]).select().single()
+    const lastName = selectedLead.name?.split(' ').pop() || selectedLead.name || 'Customer'
+    const service = selectedLead.service || 'Proposal'
+    const autoTitle = `${lastName} - ${service}`
+    const { data, error } = await supabase.from('proposals').insert([{ lead_id: selectedLead.id, title: autoTitle }]).select().single()
     if (error) { console.error(error); return }
     window.location.href = `/proposals/new?proposalId=${data.id}`
   }
@@ -184,7 +187,15 @@ export default function LeadModal({
     if (!apptType || !apptDate || !apptTime) return
     setSavingAppt(true)
     const dateTime = new Date(`${apptDate}T${apptTime}`).toISOString()
-    const endNote = apptEndTime ? `End time: ${apptEndTime}` : ''
+    // Convert end time from 24h to 12h format
+    function to12h(t: string) {
+      if (!t) return ''
+      const [h, m] = t.split(':').map(Number)
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const h12 = h % 12 || 12
+      return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+    }
+    const endNote = apptEndTime ? `End time: ${to12h(apptEndTime)}` : ''
     const fullNotes = [endNote, apptNotes].filter(Boolean).join(' | ')
     await supabase.from('lead_appointments').insert([{
       lead_id: selectedLead.id,
@@ -455,7 +466,24 @@ export default function LeadModal({
                       <div style={{ minWidth: 0 }}>
                         <p style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', margin: 0 }}>{appt.appointment_type}</p>
                         <p style={{ fontSize: 12, color: '#888', margin: '2px 0 0' }}>{formatAppt(appt.appointment_date)}</p>
-                        {appt.notes && <p style={{ fontSize: 12, color: '#666', margin: '4px 0 0' }}>{appt.notes}</p>}
+                        {appt.notes && (() => {
+                          // Split end time from user notes
+                          const parts = appt.notes.split(' | ')
+                          const endTimePart = parts.find((p: string) => p.startsWith('End time:'))
+                          const userNotes = parts.filter((p: string) => !p.startsWith('End time:')).join(' | ')
+                          return (
+                            <>
+                              {endTimePart && (
+                                <p style={{ fontSize: 12, color: '#888', margin: '3px 0 0' }}>
+                                  🕐 {endTimePart}
+                                </p>
+                              )}
+                              {userNotes && (
+                                <p style={{ fontSize: 12, color: '#666', margin: '3px 0 0' }}>{userNotes}</p>
+                              )}
+                            </>
+                          )
+                        })()}
                         {appt.completed && <span style={{ fontSize: 11, color: '#27500A', fontWeight: 500 }}>✓ Completed</span>}
                         {appt.rescheduled && !appt.completed && <span style={{ fontSize: 11, color: '#BA7517', fontWeight: 500 }}>↻ Rescheduled</span>}
                       </div>
