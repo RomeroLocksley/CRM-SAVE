@@ -271,6 +271,8 @@ function ProposalBuilder() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false)
   const [templateError, setTemplateError] = useState<string | null>(null)
+  const [shareLink, setShareLink] = useState<string | null>(null)
+  const [copySuccess, setCopySuccess] = useState(false)
 
   // ─── Catalog modal state ───────────────────────────────────────────────────
   const [showAddSection, setShowAddSection] = useState(false)
@@ -468,6 +470,27 @@ function ProposalBuilder() {
     ))
     setShowAddItem(false)
     markDirty()
+  }
+
+  async function generateShareLink() {
+    if (!proposalId) return
+    // Check if token already exists
+    const { data: existing } = await supabase.from('proposals').select('public_token').eq('id', proposalId).single()
+    let token = existing?.public_token
+    if (!token) {
+      // Generate a new token
+      token = crypto.randomUUID().replace(/-/g, '')
+      await supabase.from('proposals').update({ public_token: token }).eq('id', proposalId)
+    }
+    const link = `${window.location.origin}/p/${token}`
+    setShareLink(link)
+  }
+
+  async function copyShareLink() {
+    if (!shareLink) return
+    await navigator.clipboard.writeText(shareLink)
+    setCopySuccess(true)
+    setTimeout(() => setCopySuccess(false), 2000)
   }
 
   function markDirty() { setIsDirty(true); setSaveStatus('unsaved') }
@@ -721,11 +744,32 @@ function ProposalBuilder() {
             {proposalStatus === 'signed' && (
               <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700">✓ Signed</span>
             )}
+            <button onClick={generateShareLink} disabled={sections.length === 0}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${sections.length > 0 ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+              🔗 Customer Preview
+            </button>
           </div>
         </div>
 
         {sendError && <div className="mx-10 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 print:hidden flex-shrink-0">{sendError}</div>}
         {sendSuccess && <div className="mx-10 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 print:hidden flex-shrink-0">✓ Proposal sent! The client will receive an email with a link to review and sign.</div>}
+
+        {shareLink && (
+          <div className="mx-10 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl print:hidden flex-shrink-0">
+            <p className="text-sm font-semibold text-amber-800 mb-2">🔗 Customer Preview Link</p>
+            <p className="text-xs text-amber-600 mb-3">Share this link with your customer so they can view a beautiful version of their proposal before signing.</p>
+            <div className="flex gap-2 items-center">
+              <input readOnly value={shareLink} className="flex-1 border border-amber-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none" onClick={(e) => (e.target as HTMLInputElement).select()} />
+              <button onClick={copyShareLink} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${copySuccess ? 'bg-green-500 text-white' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
+                {copySuccess ? '✓ Copied!' : 'Copy'}
+              </button>
+              <a href={shareLink} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                Preview
+              </a>
+              <button onClick={() => setShareLink(null)} className="text-amber-400 hover:text-amber-600 text-lg leading-none px-1">✕</button>
+            </div>
+          </div>
+        )}
 
         {/* SCROLLABLE CONTENT */}
         {activeTab === 'preview' && (
