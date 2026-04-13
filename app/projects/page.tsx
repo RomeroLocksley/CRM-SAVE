@@ -1030,7 +1030,7 @@ export default function ProjectsPage() {
                   const leadId = e.target.value
                   setSelectedLeadId(leadId); setSelectedProposalId(''); setLeadProposals([])
                   if (leadId) {
-                    const { data } = await supabase.from('proposals').select('id, title, total_price').eq('lead_id', leadId).eq('status', 'signed')
+                    const { data } = await supabase.from('proposals').select('id, title, total_price, status').eq('lead_id', leadId).neq('status', 'draft')
                     setLeadProposals(data || [])
                     // Auto-generate name: nextNumber - LastName
                     const lead = leads.find((l: any) => l.id === leadId)
@@ -1046,7 +1046,7 @@ export default function ProjectsPage() {
               </div>
               {leadProposals.length > 0 && (
                 <div>
-                  <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Linked Proposal (signed)</label>
+                  <label style={{ fontSize: 11, color: '#aaa', display: 'block', marginBottom: 4 }}>Linked Proposal</label>
                   <select value={selectedProposalId} onChange={(e) => {
                     const propId = e.target.value
                     setSelectedProposalId(propId)
@@ -1059,7 +1059,7 @@ export default function ProjectsPage() {
                     }
                   }} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }}>
                     <option value="">— Select proposal —</option>
-                    {leadProposals.map((p: any) => <option key={p.id} value={p.id}>{p.title} — ${Number(p.total_price || 0).toLocaleString()}</option>)}
+                    {leadProposals.map((p: any) => <option key={p.id} value={p.id}>{p.title} ({p.status}) — ${Number(p.total_price || 0).toLocaleString()}</option>)}
                   </select>
                 </div>
               )}
