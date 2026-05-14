@@ -15,9 +15,7 @@ export default function LoginPage() {
       ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
       : `${window.location.origin}/auth/callback`
 
-    console.log('[Login] redirectTo:', redirectTo)
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo,
@@ -28,9 +26,6 @@ export default function LoginPage() {
       },
     })
 
-    console.log('[Login] OAuth data:', data)
-    console.log('[Login] OAuth error:', error)
-
     if (error) {
       setError(error.message)
       setLoading(false)
@@ -38,17 +33,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f4f7fb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: 20, padding: '40px 48px', width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', textAlign: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'white', borderRadius: 20, padding: '48px', width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', textAlign: 'center' }}>
 
-        {/* Logo */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        {/* Clave logo */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="K&D Contracting" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 12 }} />
+          <img src="/clave-logo.png" alt="Clave" style={{ height: 48, objectFit: 'contain' }} />
         </div>
 
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e', margin: '0 0 6px' }}>K&D Contracting</h1>
-        <p style={{ fontSize: 14, color: '#aaa', margin: '0 0 32px' }}>Sign in to your CRM</p>
+        <p style={{ fontSize: 14, color: '#aaa', margin: '0 0 36px', letterSpacing: '0.02em' }}>Sign in to your workspace</p>
 
         {error && (
           <div style={{ background: '#FCEBEB', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#A32D2D' }}>
@@ -60,7 +54,7 @@ export default function LoginPage() {
           onClick={signInWithGoogle}
           disabled={loading}
           style={{
-            width: '100%', padding: '12px 20px', borderRadius: 12,
+            width: '100%', padding: '13px 20px', borderRadius: 12,
             border: '0.5px solid #e0e0e0', background: 'white',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
             cursor: loading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 500,
@@ -70,7 +64,6 @@ export default function LoginPage() {
           onMouseOver={(e) => { if (!loading) e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)' }}
           onMouseOut={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)' }}
         >
-          {/* Google icon */}
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -81,7 +74,7 @@ export default function LoginPage() {
         </button>
 
         <p style={{ fontSize: 12, color: '#ccc', marginTop: 24 }}>
-          Only authorized team members can access this app.
+          Only authorized team members can access this workspace.
         </p>
       </div>
     </div>

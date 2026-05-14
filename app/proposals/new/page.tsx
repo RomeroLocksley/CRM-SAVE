@@ -143,11 +143,11 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
       <div id="proposal-preview" className="bg-white mx-auto my-6 p-12 shadow-lg print:shadow-none print:my-0 print:p-8" style={{ maxWidth: '850px' }}>
         <div className="flex items-center justify-center mb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="K&D Contracting" className="w-16 h-16 mr-4 object-contain" />
+          <img src="/company-logo.png" alt="Company Logo" className="w-16 h-16 mr-4 object-contain" />
           <div className="text-center">
-            <p className="text-xl font-bold text-[#1a3a5c]">K&amp;D Contracting LLC</p>
-            <p className="text-sm text-gray-500">4611 Carr Dr &bull; Fredericksburg, VA 22408</p>
-            <p className="text-sm text-gray-500">Phone: (540) 940-0002</p>
+            <p className="text-xl font-bold text-[#1a3a5c]">{{COMPANY_NAME}}</p>
+            <p className="text-sm text-gray-500">{{COMPANY_ADDRESS}}</p>
+            <p className="text-sm text-gray-500">Phone: {{COMPANY_PHONE}}</p>
           </div>
         </div>
 

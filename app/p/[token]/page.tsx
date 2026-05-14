@@ -70,7 +70,7 @@ export default function CustomerProposalPage() {
     <div style={{ minHeight: '100vh', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
         <p style={{ color: '#555', fontSize: 16, fontFamily: 'Georgia, serif' }}>This proposal link is no longer available.</p>
-        <p style={{ color: '#aaa', fontSize: 13, marginTop: 8, fontFamily: 'sans-serif' }}>Please contact K&D Contracting for assistance — (540) 940-0002</p>
+        <p style={{ color: '#aaa', fontSize: 13, marginTop: 8, fontFamily: 'sans-serif' }}>Please contact {{COMPANY_NAME}} for assistance — {{COMPANY_PHONE}}</p>
       </div>
     </div>
   )
@@ -82,7 +82,7 @@ export default function CustomerProposalPage() {
 
   const WHY_US = [
     { icon: '◆', title: 'All Trades In-House', desc: 'From excavation to electrical — our own crews handle every phase. No subcontractors, no handoffs.' },
-    { icon: '◆', title: 'Locally Rooted', desc: 'Born and raised in Fredericksburg. We build in the community we call home.' },
+    { icon: '◆', title: 'Locally Rooted', desc: 'We are proud to serve our local community with dedication and care.' },
     { icon: '◆', title: 'Fully Licensed & Insured', desc: 'Every permit, every inspection, fully covered. You have complete peace of mind.' },
     { icon: '◆', title: 'Transparent Pricing', desc: 'The number you see is the number you pay. No surprises, ever.' },
   ]
@@ -94,13 +94,13 @@ export default function CustomerProposalPage() {
       <div style={{ borderBottom: '1px solid #f0ece6', padding: '20px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'white', zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="K&D" style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'contain' }} />
+          <img src="/company-logo.png" alt="Company Logo" style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'contain' }} />
           <div>
-            <p style={{ fontSize: 14, fontWeight: 700, margin: 0, letterSpacing: '0.01em', fontFamily: 'sans-serif' }}>K&D Contracting</p>
-            <p style={{ fontSize: 11, color: '#8B6F47', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'sans-serif' }}>Fredericksburg, Virginia</p>
+            <p style={{ fontSize: 14, fontWeight: 700, margin: 0, letterSpacing: '0.01em', fontFamily: 'sans-serif' }}>{{COMPANY_NAME}}</p>
+            <p style={{ fontSize: 11, color: '#8B6F47', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'sans-serif' }}>{{COMPANY_CITY_STATE}}</p>
           </div>
         </div>
-        <a href="tel:5409400002" style={{ fontSize: 13, color: '#8B6F47', textDecoration: 'none', fontFamily: 'sans-serif', letterSpacing: '0.02em' }}>(540) 940-0002</a>
+        <a href="tel:{{COMPANY_PHONE_RAW}}" style={{ fontSize: 13, color: '#8B6F47', textDecoration: 'none', fontFamily: 'sans-serif', letterSpacing: '0.02em' }}>{{COMPANY_PHONE}}</a>
       </div>
 
       {/* ── HERO ───────────────────────────────────────────────────── */}
@@ -143,12 +143,12 @@ export default function CustomerProposalPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px 80px', alignItems: 'start' }}>
             <div>
-              <p style={{ fontSize: 11, color: '#8B6F47', letterSpacing: '0.18em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'sans-serif' }}>The K&D Difference</p>
+              <p style={{ fontSize: 11, color: '#8B6F47', letterSpacing: '0.18em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'sans-serif' }}>The {{COMPANY_NAME}} Difference</p>
               <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 400, color: '#0f1a2b', margin: '0 0 20px', lineHeight: 1.2 }}>
                 Built by neighbors,<br />for neighbors.
               </h2>
               <p style={{ fontSize: 15, color: '#666', lineHeight: 1.8, margin: 0, fontFamily: 'sans-serif' }}>
-                K&D Contracting is a locally owned pool and outdoor living company based in Fredericksburg, Virginia. We don't just build pools — we build lasting relationships with the families we serve.
+                {{COMPANY_NAME}} is a locally owned pool and outdoor living company based in {{COMPANY_CITY_STATE}}. We don't just build pools — we build lasting relationships with the families we serve.
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -253,17 +253,17 @@ export default function CustomerProposalPage() {
             This proposal was crafted specifically for you. Reach out any time with questions or to move forward.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="tel:5409400002" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0f1a2b', color: 'white', textDecoration: 'none', padding: '13px 24px', borderRadius: 3, fontSize: 14, fontFamily: 'sans-serif', fontWeight: 500, letterSpacing: '0.02em' }}>
+            <a href="tel:{{COMPANY_PHONE_RAW}}" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0f1a2b', color: 'white', textDecoration: 'none', padding: '13px 24px', borderRadius: 3, fontSize: 14, fontFamily: 'sans-serif', fontWeight: 500, letterSpacing: '0.02em' }}>
               Call Us
             </a>
-            <a href="mailto:admin@romerolocksley.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'white', color: '#0f1a2b', textDecoration: 'none', padding: '13px 24px', borderRadius: 3, fontSize: 14, fontFamily: 'sans-serif', fontWeight: 500, border: '1px solid #e8e0d4', letterSpacing: '0.02em' }}>
+            <a href="mailto:{{COMPANY_EMAIL}}" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'white', color: '#0f1a2b', textDecoration: 'none', padding: '13px 24px', borderRadius: 3, fontSize: 14, fontFamily: 'sans-serif', fontWeight: 500, border: '1px solid #e8e0d4', letterSpacing: '0.02em' }}>
               Send an Email
             </a>
           </div>
           <div style={{ marginTop: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.jpg" alt="K&D" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain' }} />
-            <p style={{ fontSize: 13, color: '#bbb', fontFamily: 'sans-serif', margin: 0 }}>K&D Contracting LLC · 4611 Carr Dr, Fredericksburg VA 22408</p>
+            <img src="/company-logo.png" alt="Company Logo" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain' }} />
+            <p style={{ fontSize: 13, color: '#bbb', fontFamily: 'sans-serif', margin: 0 }}>{{COMPANY_NAME}} LLC · 4611 Carr Dr, Fredericksburg VA 22408</p>
           </div>
         </div>
       </div>

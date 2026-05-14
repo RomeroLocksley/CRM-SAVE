@@ -13,13 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "K&D Contracting CRM",
-  description: "CRM for K&D Contracting LLC",
+  title: "Clave CRM",
+  description: "Clave — Business Management System",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "K&D CRM",
+    title: "Clave",
   },
 };
 
@@ -37,9 +37,9 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="K&D CRM" />
+        <meta name="apple-mobile-web-app-title" content="Clave" />
         <meta name="theme-color" content="#0C447C" />
-        <link rel="apple-touch-icon" href="/logo.jpg" />
+        <link rel="apple-touch-icon" href="/clave-logo.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
