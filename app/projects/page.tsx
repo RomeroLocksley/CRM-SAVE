@@ -136,7 +136,7 @@ export default function ProjectsPage() {
   }, [])
 
   async function loadStageTemplates() {
-    const { data } = await supabase.from('stage_templates').select('*').order('stage_type').order('sort_order')
+    const { data } = await supabase.from('stage_templates').select('*').order('stage_type', { ascending: false }).order('sort_order')
     setStageTemplates(data || [])
   }
 
@@ -309,13 +309,19 @@ export default function ProjectsPage() {
 
   // Build stageGroups dynamically from DB templates
   const stageGroupNames = [...new Set(stageTemplates.map((s) => s.name))]
-  const stageGroups = stageGroupNames.map((groupName) => ({
-    stage: groupName,
-    steps: stageTemplates
+  const stageGroups = stageGroupNames.map((groupName) => {
+    const groupSteps = stageTemplates
       .filter((s) => s.name === groupName)
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((s) => ({ step_name: s.step_name, stage: groupName })),
-  }))
+      .map((s) => ({ step_name: s.step_name, stage: groupName }))
+    const groupStageRecords = stages.filter((s) => s.stage === groupName)
+    return {
+      stage: groupName,
+      steps: groupSteps,
+      totalCount: groupSteps.length,
+      completedCount: groupStageRecords.filter((s) => s.completed).length,
+    }
+  })
 
   const overallPct = stages.length > 0 ? Math.round((stages.filter((s) => s.completed).length / stages.length) * 100) : 0
 
