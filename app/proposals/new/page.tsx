@@ -68,6 +68,12 @@ type CatalogCostRow = {
   unit_cost: number
 }
 
+// ─── Client configuration — update these for each new client ─────────────────
+const COMPANY_NAME = 'Your Company Name'
+const COMPANY_ADDRESS = '123 Main St, City, State 00000'
+const COMPANY_PHONE = '(000) 000-0000'
+// ──────────────────────────────────────────────────────────────────────────────
+
 function toNumericOrNull(value: any): number | null {
   if (value === '' || value === null || value === undefined) return null
   const n = Number(value)
@@ -145,9 +151,9 @@ function ProposalPreview({ proposalId, proposalTitle }: { proposalId: string, pr
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/company-logo.png" alt="Company Logo" className="w-16 h-16 mr-4 object-contain" />
           <div className="text-center">
-            <p className="text-xl font-bold text-[#1a3a5c]">{{COMPANY_NAME}}</p>
-            <p className="text-sm text-gray-500">{{COMPANY_ADDRESS}}</p>
-            <p className="text-sm text-gray-500">Phone: {{COMPANY_PHONE}}</p>
+            <p className="text-xl font-bold text-[#1a3a5c]">{COMPANY_NAME}</p>
+            <p className="text-sm text-gray-500">{COMPANY_ADDRESS}</p>
+            <p className="text-sm text-gray-500">Phone: {COMPANY_PHONE}</p>
           </div>
         </div>
 
