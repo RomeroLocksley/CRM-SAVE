@@ -649,12 +649,14 @@ export default function ProjectsPage() {
                       <div key={sg.stage} style={{ marginBottom: 16 }}>
                         <p style={{ fontSize: 11, fontWeight: 600, color: projectColor, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>{sg.stage}</p>
                         {sg.steps.map((step) => {
+                          // Look up actual stage record for this step
+                          const stageRecord = stages.find((s) => s.step_name === step.step_name && s.stage === step.stage)
                           const isSchedulable = schedulableStepNames.has(step.step_name)
-                          const isCompleted = step.completed
-                          const isStarted = !!step.started_at
-                          const isPlanned = !!step.planned_start
+                          const isCompleted = stageRecord?.completed
+                          const isStarted = !!stageRecord?.started_at
+                          const isPlanned = !!stageRecord?.planned_start
                           return (
-                            <div key={step.id} style={{ marginBottom: 6 }}>
+                            <div key={step.step_name} style={{ marginBottom: 6 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: isCompleted ? '#f0faf0' : isStarted ? '#f0f7ff' : 'transparent' }}>
                                 <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${isCompleted ? '#27500A' : isStarted ? projectColor : '#ddd'}`, background: isCompleted ? '#27500A' : isStarted ? `rgba(${hexToRgb(projectColor)}, 0.15)` : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                   {isCompleted && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -662,21 +664,21 @@ export default function ProjectsPage() {
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <span style={{ fontSize: 13, color: isCompleted ? '#aaa' : '#333', textDecoration: isCompleted ? 'line-through' : 'none' }}>{step.step_name}</span>
-                                  {isStarted && !isCompleted && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>Started {fmtDate(step.started_at)}</p>}
-                                  {isCompleted && step.started_at && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>{fmtDate(step.started_at)} → {fmtDate(step.completed_at)} ({daysBetween(step.started_at, step.completed_at)} days)</p>}
-                                  {!isStarted && isPlanned && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>Planned: {fmtDate(step.planned_start)}{step.planned_end ? ` → ${fmtDate(step.planned_end)}` : ''}</p>}
+                                  {isStarted && !isCompleted && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>Started {fmtDate(stageRecord?.started_at)}</p>}
+                                  {isCompleted && stageRecord?.started_at && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>{fmtDate(stageRecord.started_at)} → {fmtDate(stageRecord.completed_at)} ({daysBetween(stageRecord.started_at, stageRecord.completed_at)} days)</p>}
+                                  {!isStarted && isPlanned && <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0' }}>Planned: {fmtDate(stageRecord?.planned_start)}{stageRecord?.planned_end ? ` → ${fmtDate(stageRecord.planned_end)}` : ''}</p>}
                                 </div>
-                                {!isCompleted && isSchedulable && !isStarted && (
-                                  <button onClick={() => markStarted(step.id, step.step_name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: `rgba(${hexToRgb(projectColor)}, 0.1)`, color: projectColor, border: `0.5px solid rgba(${hexToRgb(projectColor)}, 0.3)`, cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>Mark Started</button>
+                                {!isCompleted && isSchedulable && !isStarted && stageRecord && (
+                                  <button onClick={() => markStarted(stageRecord.id, stageRecord.step_name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: `rgba(${hexToRgb(projectColor)}, 0.1)`, color: projectColor, border: `0.5px solid rgba(${hexToRgb(projectColor)}, 0.3)`, cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>Mark Started</button>
                                 )}
-                                {!isCompleted && isStarted && (
-                                  <button onClick={() => markComplete(step.id, step.step_name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: '#EAF3DE', color: '#27500A', border: '0.5px solid #c0dd97', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>Mark Complete</button>
+                                {!isCompleted && isStarted && stageRecord && (
+                                  <button onClick={() => markComplete(stageRecord.id, stageRecord.step_name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: '#EAF3DE', color: '#27500A', border: '0.5px solid #c0dd97', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>Mark Complete</button>
                                 )}
-                                {!isCompleted && !isSchedulable && (
-                                  <button onClick={() => markComplete(step.id, step.step_name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: '#f5f5f5', color: '#888', border: '0.5px solid #e0e0e0', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>Mark Done</button>
+                                {!isCompleted && !isSchedulable && stageRecord && (
+                                  <button onClick={() => markComplete(stageRecord.id, stageRecord.step_name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: '#f5f5f5', color: '#888', border: '0.5px solid #e0e0e0', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>Mark Done</button>
                                 )}
-                                {isCompleted && step.completed_at && (
-                                  <span style={{ fontSize: 11, color: '#aaa', whiteSpace: 'nowrap' }}>{new Date(step.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                {isCompleted && stageRecord?.completed_at && (
+                                  <span style={{ fontSize: 11, color: '#aaa', whiteSpace: 'nowrap' }}>{new Date(stageRecord.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                 )}
                               </div>
                             </div>
