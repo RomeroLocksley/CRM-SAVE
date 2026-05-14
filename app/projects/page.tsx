@@ -10,36 +10,8 @@ const PRESET_COLORS = [
   '#1A7A6E', '#5C3D8F', '#B03060', '#2E7D32', '#00838F',
 ]
 
-const STAGES = [
-  {
-    stage: 'Pre-Construction',
-    steps: [
-      'Draft drawings created', 'Sent to engineer', 'Prepare permit package', 'Permits submitted',
-      'Walk through with project manager', 'Finalize selections', 'Finalize internal drawings',
-      'HOA approved', 'Permits approved', 'Pool ordered / delivery date set', 'Pre-construction inspection',
-    ],
-  },
-  {
-    stage: 'Construction',
-    steps: [
-      'Excavation', 'Gravel base / site prep', 'Pool shell delivered & set', 'Bonding inspection',
-      'Rough plumbing', 'Plumbing pressure test & inspection', 'Electrical rough-in', 'Electrical inspection',
-      'Backfill with gravel', 'Pool filled with water', 'Equipment set (pump, filter, lighting)',
-      'Bond beam / concrete work', 'Patio / decking', 'Fence / barrier installed', 'Barrier inspection',
-      'Final electrical inspection', 'Final building inspection', 'Startup & customer walkthrough',
-    ],
-  },
-]
-
-const SCHEDULABLE_STEPS = new Set([
-  'Excavation', 'Gravel base / site prep', 'Pool shell delivered & set', 'Bonding inspection',
-  'Rough plumbing', 'Plumbing pressure test & inspection', 'Electrical rough-in', 'Electrical inspection',
-  'Backfill with gravel', 'Pool filled with water', 'Equipment set (pump, filter, lighting)',
-  'Bond beam / concrete work', 'Patio / decking', 'Fence / barrier installed', 'Barrier inspection',
-  'Final electrical inspection', 'Final building inspection', 'Startup & customer walkthrough',
-])
-
-const ALL_STEPS = STAGES.flatMap((s) => s.steps.map((step) => ({ stage: s.stage, step_name: step })))
+// Stages are now loaded from the database (stage_templates table)
+// STAGES, SCHEDULABLE_STEPS, and ALL_STEPS are built dynamically from DB data
 
 function fmtDate(ts: string): string {
   if (!ts) return ''
@@ -70,6 +42,7 @@ function formatTs(ts: string) {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([])
+  const [stageTemplates, setStageTemplates] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState('Unknown')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
@@ -156,11 +129,16 @@ export default function ProjectsPage() {
   }
 
   useEffect(() => {
-    loadProjects(); loadLeads()
+    loadProjects(); loadLeads(); loadStageTemplates()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setCurrentUser(user.user_metadata?.full_name || user.email || 'Unknown')
     })
   }, [])
+
+  async function loadStageTemplates() {
+    const { data } = await supabase.from('stage_templates').select('*').order('stage_type').order('sort_order')
+    setStageTemplates(data || [])
+  }
 
   async function selectProject(projectId: string) {
     setSelectedProjectId(projectId)
@@ -193,7 +171,7 @@ export default function ProjectsPage() {
       project_number: nextNumber,
     }]).select().single()
     if (error) { console.error(error); return }
-    const stageRows = ALL_STEPS.map((s, i) => ({ project_id: newProject.id, stage: s.stage, step_name: s.step_name, sort_order: i, completed: false }))
+    const stageRows = stageTemplates.map((s, i) => ({ project_id: newProject.id, stage: s.name, step_name: s.step_name, sort_order: s.sort_order ?? i, completed: false }))
     await supabase.from('project_stages').insert(stageRows)
     setShowNewProject(false)
     setNewProjectName(''); setSelectedLeadId(''); setSelectedProposalId(''); setNewProjectService(''); setNewProjectLaborRate('75'); setNewProjectColor(PRESET_COLORS[0])
@@ -329,11 +307,14 @@ export default function ProjectsPage() {
 
   // ─── Derived ───────────────────────────────────────────────────────────────
 
-  const stageGroups = STAGES.map((s) => ({
-    ...s,
-    steps: stages.filter((st) => st.stage === s.stage),
-    completedCount: stages.filter((st) => st.stage === s.stage && st.completed).length,
-    totalCount: stages.filter((st) => st.stage === s.stage).length,
+  // Build stageGroups dynamically from DB templates
+  const stageGroupNames = [...new Set(stageTemplates.map((s) => s.name))]
+  const stageGroups = stageGroupNames.map((groupName) => ({
+    stage: groupName,
+    steps: stageTemplates
+      .filter((s) => s.name === groupName)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((s) => ({ step_name: s.step_name, stage: groupName })),
   }))
 
   const overallPct = stages.length > 0 ? Math.round((stages.filter((s) => s.completed).length / stages.length) * 100) : 0
@@ -345,7 +326,8 @@ export default function ProjectsPage() {
 
   const projectColor = project?.color || '#185FA5'
 
-  const ganttSteps = stages.filter((s) => SCHEDULABLE_STEPS.has(s.step_name) && (s.planned_start || s.started_at))
+  const schedulableStepNames = new Set(stageTemplates.filter((s) => s.stage_type === 'construction').map((s) => s.step_name))
+  const ganttSteps = stages.filter((s) => schedulableStepNames.has(s.step_name) && (s.planned_start || s.started_at))
   const allDates = ganttSteps.flatMap((s: any) => [s.planned_start, s.planned_end, s.started_at, s.completed_at].filter(Boolean))
   const ganttStartDate = allDates.length > 0 ? new Date(Math.min(...allDates.map((d: string) => new Date(d).getTime()))) : new Date()
   const ganttEndDate = allDates.length > 0 ? new Date(Math.max(...allDates.map((d: string) => new Date(d).getTime()))) : new Date()
@@ -661,7 +643,7 @@ export default function ProjectsPage() {
                       <div key={sg.stage} style={{ marginBottom: 16 }}>
                         <p style={{ fontSize: 11, fontWeight: 600, color: projectColor, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px' }}>{sg.stage}</p>
                         {sg.steps.map((step) => {
-                          const isSchedulable = SCHEDULABLE_STEPS.has(step.step_name)
+                          const isSchedulable = schedulableStepNames.has(step.step_name)
                           const isCompleted = step.completed
                           const isStarted = !!step.started_at
                           const isPlanned = !!step.planned_start
@@ -713,7 +695,7 @@ export default function ProjectsPage() {
                         <span key={h} style={{ fontSize: 11, color: '#aaa', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
                       ))}
                     </div>
-                    {stages.filter((s) => SCHEDULABLE_STEPS.has(s.step_name)).map((step, i, arr) => {
+                    {stages.filter((s) => schedulableStepNames.has(s.step_name)).map((step, i, arr) => {
                       const edit = plannedEdits[step.id]
                       const hasEdit = !!edit
                       const isSaved = savedSteps.has(step.id)
